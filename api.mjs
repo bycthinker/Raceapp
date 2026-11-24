@@ -1,4 +1,4 @@
-import { racer, play, spaCourse, advanceTurn, forfeitRace } from './game.mjs';
+import { racer, play, courseFor,seasonCourses, advanceTurn, forfeitRace } from './game.mjs';
 
 class GameError extends Error {
   constructor(message, status = 400) {
@@ -31,13 +31,14 @@ export async function api(request, store) {
     const [,code,action] = match;
     const token = request.headers.get('Authorization')?.replace(/^Bearer /,'');
     if (request.method === 'POST' && !code) {
-      const { name,lapGoal } = await request.json();
+      const { name,lapGoal,course="r10" } = await request.json();
+      if(!Object.hasOwn(seasonCourses,course))throw new GameError('Circuit inconnu.');
       const newToken = crypto.randomUUID();
-      const player = racer(playerName(name),newToken,0,spaCourse);
+      const player = racer(playerName(name),newToken,0,seasonCourses[course]);
       for (let attempt = 0; attempt < 8; attempt++) {
         const roomCode = Array.from(crypto.getRandomValues(new Uint8Array(6)),
           byte => codeAlphabet[byte % codeAlphabet.length]).join('');
-        const room = { code:roomCode,course:"spa",lapGoal:lapGoal===2?2:1, revision:0, state:'lobby', turn:0, round:1, players:[player], winners:[] };
+        const room = { code:roomCode,course,lapGoal:lapGoal===2?2:1, revision:0, state:'lobby', turn:0, round:1, players:[player], winners:[] };
         if (await store.insert(room)) return json({ room:view(room,newToken), token:newToken },201);
       }
       throw new GameError('Création impossible. Réessaie.',503);
@@ -68,7 +69,7 @@ export async function api(request, store) {
       if (room.state !== 'lobby' || room.players.length >= 4) throw new GameError('La salle est pleine ou la course a déjà commencé.',409);
       const { name } = await request.json();
       newToken = crypto.randomUUID();
-      room.players.push(racer(playerName(name),newToken,room.players.length,spaCourse));
+      room.players.push(racer(playerName(name),newToken,room.players.length,courseFor(room)));
     } else {
       if (you < 0) throw new GameError('Rejoins la salle pour jouer.',403);
       const body = await request.json();
@@ -77,7 +78,7 @@ export async function api(request, store) {
       if(action==='leave'){
         if(room.state==='lobby'){
           room.players.splice(you,1);
-          room.players=room.players.map((p,i)=>racer(p.name,p.token,i,spaCourse));
+          room.players=room.players.map((p,i)=>racer(p.name,p.token,i,courseFor(room)));
           if(!room.players.length)room.state='closed';
         }else if(room.state==='racing'){forfeitRace(room,you);}
       }else if (action === 'start') {
@@ -87,7 +88,7 @@ export async function api(request, store) {
         room.state = 'racing';room.raceId=crypto.randomUUID();
       } else if (action === 'restart') {
         if (you !== 0 || room.state !== 'finished') throw new GameError('L’hôte peut relancer une course terminée.',409);
-        room.players = room.players.filter(p=>!p.forfeit).map((driver,index) => racer(driver.name,driver.token,index,spaCourse));
+        room.players = room.players.filter(p=>!p.forfeit).map((driver,index) => racer(driver.name,driver.token,index,courseFor(room)));
         if(room.players.length<2)throw new GameError('Crée une nouvelle salle pour la revanche.',409);
         Object.assign(room,{raceId:crypto.randomUUID(),byForfeit:false,state:'racing',turn:0,round:1,winners:[],replay:[],lastLap:null});
       } else {

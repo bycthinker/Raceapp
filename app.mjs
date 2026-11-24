@@ -1,4 +1,4 @@
-import {spaCourse,courseFor,standings,colors,inside,options} from './game.mjs';
+import {seasonCourses,fillCoursePicker,courseFor,standings,colors,inside,options} from './game.mjs';
 const byId = id => document.getElementById(id);
 const board = byId('board');
 const entry = byId('entry');
@@ -7,6 +7,8 @@ const message = byId('message');
 const primary = byId('primary');
 const inviteCode = new URL(location.href).searchParams.get('salle') ?? '';
 const roomInput = byId('room-code');
+const trackPicker=byId('track');fillCoursePicker(trackPicker);
+trackPicker.addEventListener('change',()=>render());
 roomInput.value = inviteCode.toUpperCase();
 byId('name').value = localStorage.getItem('cq-name') ?? '';
 
@@ -248,7 +250,8 @@ function drawSurface(course, target = board) {
 
 function draw(active, choices) {
   board.replaceChildren();
-  const course = spaCourse;
+  const course=room?courseFor(room):seasonCourses[trackPicker.value];
+  byId('circuit-title').textContent=course.name??('Le Vallon des Aiguilles');
   const {width,height,start,finish,grid:startingPositions} = course;
   if (zoom && active) {
     const [zoomWidth,zoomHeight] = zoomSizes[zoom];
@@ -280,7 +283,7 @@ function draw(active, choices) {
     }
   }
   const checkpoint = active && course.checkpoints[active.checkpoint ?? 0];
-  if (checkpoint && room.course === 'spa') {
+  if (checkpoint) {
     const {axis,at,min,max} = checkpoint;
     const endpoints = axis === 'x' ? {x1:at,x2:at,y1:min,y2:max} : {x1:min,x2:max,y1:at,y2:at};
     svg('line',{...endpoints,stroke:'#a6f2d7','stroke-opacity':.78,'stroke-dasharray':'.18 .21','stroke-width':.12});
@@ -673,7 +676,7 @@ entry.addEventListener('submit',event => {
   if (joining && !/^[A-Z2-9]{6}$/.test(code)) { notice('Entre le code à 6 caractères.'); return; }
   busy(async () => {
     const key = joining ? localStorage.getItem('cq-token-'+code) : null;
-    const data = await request(joining ? '/'+code+'/join' : '',{name,lapGoal:Number(byId('lap-goal').value)},key);
+    const data = await request(joining ? '/'+code+'/join' : '',{name,course:trackPicker.value,lapGoal:Number(byId('lap-goal').value)},key);
     localStorage.setItem('cq-name',name);
     remember(data);
   });

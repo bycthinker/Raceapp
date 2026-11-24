@@ -1,6 +1,6 @@
 # Raceapp · Course sur Quadrillage
 
-Jeu de course sur quadrillage pour 2 à 4 joueurs. Le menu Raceapp propose la course en direct, le solo et une course contre une IA locale sur Spa. En direct, créez ou rejoignez une salle. Le lien « Jouer sur le même écran » ouvre la version locale.
+Jeu de course sur quadrillage pour 2 à 4 joueurs. Le menu Raceapp propose la course en direct, le solo et une course contre une IA locale sur le circuit choisi. En direct, créez ou rejoignez une salle. Le lien « Jouer sur le même écran » ouvre la version locale.
 
 ## Mettre les fichiers sur GitHub depuis Windows
 
@@ -36,3 +36,5 @@ Avec Node.js 24, ouvrir un terminal dans le dossier qui contient package.json et
 
 
 Le tutoriel en cinq étapes débouche sur un tour du petit ovale. Les statistiques par pseudo et mode sont stockées dans le navigateur. Forfait retire la voiture des collisions et passe la main aux pilotes encore engagés.
+
+23 circuits sélectionnables en solo, contre l’IA, sur un même écran et en salle. Le créateur choisit le tracé en ligne. Le petit ovale reste accessible depuis le tutoriel.
