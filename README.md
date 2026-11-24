@@ -6,7 +6,7 @@ Jeu de course sur quadrillage pour 2 à 4 joueurs. La page principale permet de 
 
 1. Extraire le ZIP dans un dossier.
 2. Ouvrir le dépôt Raceapp sur github.com. Dans l’onglet Code, choisir Add file → Upload files (ou uploading an existing file dans un dépôt vide).
-3. Glisser le contenu extrait, y compris le dossier public. Vérifier que package.json et server.mjs apparaissent à la racine du dépôt.
+3. Glisser ensemble les huit fichiers extraits directement à la racine du dépôt. Vérifier que package.json et server.mjs apparaissent à la racine du dépôt.
 4. Cliquer sur Commit changes sur la branche principale.
 
 ## Héberger le jeu sur Render
@@ -30,6 +30,6 @@ Avec Node.js 24, ouvrir un terminal dans le dossier qui contient package.json et
 ## Fichiers
 - server.mjs sert le site et enregistre les salles dans SQLite.
 - api.mjs contrôle les invitations, les tours et les déplacements.
-- public/game.mjs est le moteur partagé par le serveur et le navigateur.
-- public/index.html et public/app.mjs affichent la course en ligne.
-- public/local.html contient le jeu autonome sur un seul écran.
+- game.mjs est le moteur partagé par le serveur et le navigateur.
+- index.html et app.mjs affichent la course en ligne.
+- local.html contient le jeu autonome sur un seul écran.

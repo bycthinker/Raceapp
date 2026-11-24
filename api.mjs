@@ -1,4 +1,4 @@
-import { racer, play, spaCourse, advanceTurn } from './public/game.mjs';
+import { racer, play, spaCourse, advanceTurn } from './game.mjs';
 
 class GameError extends Error {
   constructor(message, status = 400) {

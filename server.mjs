@@ -44,7 +44,7 @@ createServer(async (incoming,outgoing) => {
       response = await api(new Request(url,init),store);
     } else if (files.has(url.pathname)) {
       const [name,type] = files.get(url.pathname);
-      const content = await readFile(new URL('./public/'+name,import.meta.url));
+      const content = await readFile(new URL('./'+name,import.meta.url));
       response = new Response(content,{headers:{'Content-Type':type}});
     } else {
       response = new Response('Page introuvable.',{status:404});

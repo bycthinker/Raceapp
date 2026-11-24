@@ -1,0 +1,1115 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#10191d">
+  <title>Course sur Quadrillage</title>
+  <style>:root{color-scheme:dark;--ink:#10191d;--panel:#17262b;--edge:#304449;--paper:#f4f5ee;--muted:#a5b9b9;--mint:#a6f2d7;--yellow:#f5bf63;font:16px/1.5 system-ui,sans-serif}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;color:var(--paper);background:radial-gradient(ellipse at 15% 0%,#23393c,var(--ink) 55%);min-height:100vh}
+.shell{max-width:1000px;margin:auto;padding:36px 24px}
+.mast{display:flex;align-items:center;gap:16px;margin-bottom:25px}
+.mark{width:46px;height:46px;border-radius:12px;background:conic-gradient(var(--ink) 25%,var(--mint) 0 50%,var(--ink) 0 75%,var(--mint) 0) center / 16px 16px;border:2px solid var(--mint);flex:none;transform:rotate(-8deg)}
+h1,h2,h3,p{margin:0}
+h1{font-size:clamp(1.35rem,4.5vw,2.1rem);letter-spacing:-.045em;line-height:1.15}
+h2{font-size:1.25rem;letter-spacing:-.025em}
+h3{font-size:1.12rem}
+p,.muted,.legend{color:var(--muted)}
+.layout{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(290px,1fr);gap:20px;align-items:start}
+.circuit,.panel{background:var(--panel);border:1px solid var(--edge);border-radius:20px;overflow:hidden}
+.circuit header,.room-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.circuit header{padding:11px 16px;flex-wrap:wrap}
+.zoom-controls{display:flex;flex-wrap:wrap;gap:5px}
+.zoom-controls button{padding-inline:9px}
+.zoom-controls button:nth-child(-n+2){min-width:42px;font-size:1.2rem}
+#board,#replay-board{background:#101d22;display:block;width:100%;height:auto;max-height:66vh;min-height:320px;touch-action:manipulation}
+#replay-board{min-height:0}
+.minimap-panel{margin-top:15px}
+.minimap-panel h3{margin-bottom:7px;font-size:.92rem}
+#minimap{display:block;width:100%;max-height:170px;background:#102019;border:1px solid var(--edge);border-radius:10px;cursor:crosshair;touch-action:manipulation}
+.replay-controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.players .position{min-width:1.7em;color:var(--paper);font-size:.83rem;font-variant-numeric:tabular-nums}
+#board[data-overview="false"]{touch-action:none;cursor:grab;user-select:none}
+#board[data-dragging],#board[data-dragging] .choice{cursor:grabbing}
+#board:focus-visible{outline:2px solid var(--mint);outline-offset:-3px}
+.legend{display:flex;gap:18px;padding:8px 16px;font-size:.88rem}
+.legend span{display:flex;align-items:center;gap:7px}
+.legend i{width:12px;height:3px;background:var(--yellow)}
+.legend span+span i{background:var(--mint)}
+.legend .finish-key{width:16px;height:12px;border:1px solid #bac4be;background:conic-gradient(#172126 25%,#f2eee2 0 50%,#172126 0 75%,#f2eee2 0) 0 0 / 8px 8px}
+.panel{padding:20px}
+form{display:grid;gap:10px}
+form h2{margin-bottom:4px}
+label{font-size:.9rem;color:var(--muted)}
+input,button{font:inherit;min-height:42px;border-radius:10px}
+input{width:100%;background:#101c20;border:1px solid var(--edge);padding:8px 12px;color:var(--paper)}
+#room-code{text-transform:uppercase;letter-spacing:.12em}
+button{background:var(--mint);color:#0d2420;border:1px solid transparent;padding:7px 13px;font-weight:700;cursor:pointer}
+button.secondary{background:#203238;border-color:var(--edge);color:var(--paper)}
+button:disabled{opacity:.55;cursor:default}
+button:focus-visible,input:focus-visible{outline:2px solid var(--yellow);outline-offset:3px}
+.choice:focus{outline:none}
+.choice:focus-visible:not([aria-pressed="true"]) .choice-ring{stroke-opacity:1;stroke-width:.14}
+.separator{height:1px;background:var(--edge);margin:6px 0}
+.players{list-style:none;padding:0;margin:16px 0;display:grid;gap:6px}
+.players li{display:flex;align-items:center;gap:9px;padding:7px 9px;border:1px solid transparent;border-radius:9px;overflow-wrap:anywhere}
+.players li.active{border-color:var(--edge);background:#101c20}
+.players i{width:10px;height:10px;border-radius:50%;flex:none}
+.players span:last-child{margin-left:auto;color:var(--muted);font-size:.83rem;flex:none}
+.turn{background:#101c20;border-radius:12px;padding:13px}
+.turn p{margin-top:4px}
+#round-count{font-size:.88rem;font-variant-numeric:tabular-nums}
+.lap-notice{color:var(--mint);font-size:.9rem;font-weight:650}
+.turn button{width:100%;margin-top:12px}
+.exit{margin-top:15px;width:100%}
+#message{margin-top:10px;color:var(--yellow);overflow-wrap:anywhere}
+.choice{cursor:pointer}
+@media(max-width:680px){.shell{padding:16px 10px}.mast{margin:2px 6px 14px}.mark{width:37px;height:37px}.layout{display:flex;flex-direction:column;gap:10px}.panel,.circuit{width:100%;border-radius:15px}.panel{order:-1;padding:12px}.shell.playing .panel{order:0}.shell.playing #board{height:min(51vh,440px);min-height:250px}.turn{padding:9px}.players{margin:6px 0;gap:2px}.players li{padding:3px 7px}.exit{margin-top:8px}.circuit header{padding:7px 12px}}
+.shell.playing{max-width:1400px;padding-top:12px}
+.playing .mast,.playing .panel,.playing .legend{display:none}
+.playing .layout,.playing .circuit{display:block}
+.playing .circuit header{justify-content:space-between;padding:5px 12px}
+.playing .circuit header h2{font-size:.9rem}
+.playing .circuit #board{height:clamp(280px,66dvh,760px);max-height:none;min-height:0;background:#101b18}
+.race-hud{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:start;gap:16px;padding:12px 16px;background:#152329;border-bottom:1px solid var(--edge)}
+.race-hud .players{max-width:290px;margin:0}
+.race-hud .players li{gap:6px;padding:2px 5px}
+.race-hud .players span:not(:last-child){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.race-hud .players span:last-child{display:none}
+.race-hud .minimap-panel{margin:0 0 0 auto;width:min(100%,170px)}
+.race-hud .minimap-panel h3{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.race-hud #minimap{aspect-ratio:63.2/55.2}
+.race-counters{display:flex;gap:8px;text-align:center;font-variant-numeric:tabular-nums}
+.race-counters div{padding:4px 12px;border:1px solid var(--edge);border-radius:9px;background:#101c20}
+.race-counters span{display:block;font-size:.75rem;color:var(--muted)}
+.race-counters strong{display:block;font-size:1.2rem}
+.race-dock{padding:8px 12px}
+.race-dock .turn{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 14px;padding:6px 10px}
+.race-dock .turn h3,.race-dock .turn p{grid-column:1;margin:0}
+.race-dock #round-count{display:none}
+.race-dock .turn button{grid-column:2;grid-row:1/span 3;align-self:center;width:auto;margin:0}
+@media(max-width:520px){
+  .shell.playing{padding-inline:6px}
+  .race-hud{gap:6px;padding:6px}
+  .race-counters{gap:3px}
+  .race-counters div{padding:3px 5px}
+  .race-counters span{font-size:.68rem}
+  .race-counters strong{font-size:1rem}
+  .race-hud .players li{padding:1px 2px;gap:4px;font-size:.8rem}
+  .race-hud .players i{width:7px;height:7px}
+  .race-hud .players .position{min-width:0;font-size:.72rem}
+  .playing .circuit #board{height:clamp(250px,54dvh,480px)}
+  .playing .circuit header{padding:4px 6px}
+  .race-dock .turn{grid-template-columns:minmax(0,1fr);gap:4px}
+  .race-dock .turn button{grid-column:1;grid-row:auto;width:100%}
+}
+</style>
+
+<style>
+#names{display:grid;gap:6px}
+select{font:inherit;min-height:42px;border:1px solid var(--edge);border-radius:10px;background:#101c20;color:var(--paper);padding:8px 12px}
+#names input{margin-bottom:4px}
+.confirmation-setting{display:flex;align-items:center;gap:9px;min-height:44px}
+.confirmation-setting input{width:20px;height:20px;min-height:0;accent-color:var(--mint)}
+.panel form p{font-size:.9rem}
+.shell .circuit svg[data-overview="true"]{height:auto;min-height:0;max-height:none;aspect-ratio:63.2/55.2}
+.shell #replay-board{aspect-ratio:63.2/55.2}
+</style></head>
+<body>
+  <main class="shell">
+    <header class="mast">
+      <div class="mark" aria-hidden="true"></div>
+      <div><h1>Course sur Quadrillage</h1><p>Démo locale · 2 à 4 joueurs</p></div>
+    </header>
+    <div class="layout">
+      <section class="circuit" aria-labelledby="circuit-title">
+        <div id="race-hud" class="race-hud" hidden>
+          <div id="race-positions" aria-label="Positions"></div>
+          <div class="race-counters">
+            <div><span>Manches jouées</span><strong id="race-round">0</strong></div>
+            <div><span>Tour</span><strong id="race-lap">1/1</strong></div>
+          </div>
+          <div id="race-map"></div>
+        </div>
+        <header>
+          <h2 id="circuit-title">Spa · Circuit des Ardennes</h2>
+          <div class="zoom-controls" id="zoom-controls" role="group" aria-label="Zoom de la piste" hidden>
+            <button class="secondary" id="zoom-out" type="button" aria-label="Dézoomer">−</button>
+            <button class="secondary" id="zoom-in" type="button" aria-label="Zoomer">+</button>
+            <button class="secondary" id="toggle-zoom" type="button">Vue entière</button>
+            <button class="secondary" id="recenter-board" type="button" hidden>Recentrer</button>
+          </div>
+        </header>
+        <svg id="board" role="group" aria-label="Circuit quadrillé" tabindex="0"></svg>
+        <svg id="replay-board" role="img" aria-label="Replay des monoplaces" hidden></svg>
+        <div id="race-dock" class="race-dock" hidden></div>
+        <div class="legend"><span><i class="finish-key"></i>Départ et arrivée</span><span><i></i>Prochain repère</span></div>
+      </section>
+      <section id="control-panel" class="panel" aria-label="Contrôles de la partie">
+        <form id="entry">
+          <h2>Course sur le même écran</h2>
+          <label for="driver-count">Nombre de joueurs</label>
+          <select id="driver-count">
+            <option>2</option><option>3</option><option>4</option>
+          </select>
+          <div id="names"></div>
+          <label for="lap-goal">Tours de circuit</label>
+          <select id="lap-goal">
+            <option>1</option><option>2</option>
+          </select>
+          <label class="confirmation-setting"><input id="double-confirm" type="checkbox" checked> Valider par double pression</label>
+          <button type="submit">Lancer la course</button>
+          <p>À chaque tour, choisis une intersection puis valide le déplacement. Passe ensuite l’écran au joueur suivant.</p>
+        </form>
+        <div id="game" hidden>
+          <h2>Positions et vitesses</h2>
+          <div id="result-positions"><ul id="players" class="players"></ul></div>
+          <div id="result-turn"><div id="turn-controls" class="turn">
+            <h3 id="status" aria-live="polite"></h3>
+            <p id="round-count" hidden></p>
+            <p id="lap-notice" class="lap-notice" aria-live="polite" hidden></p>
+            <p id="hint"></p>
+            <button type="button" id="primary" hidden></button>
+          </div></div>
+          <div id="result-map"><section id="minimap-panel" class="minimap-panel" aria-labelledby="minimap-title" hidden>
+            <h3 id="minimap-title">Mini-carte</h3>
+            <svg id="minimap" role="img" aria-label="Positions des voitures et cadre visible"></svg>
+          </section></div>
+          <div id="replay-controls" class="replay-controls" hidden>
+            <button type="button" class="secondary" id="replay-toggle">Voir le replay</button>
+            <button type="button" class="secondary" id="replay-pause" hidden>Pause</button>
+          </div>
+          <button class="secondary exit" type="button" id="leave">Retour aux joueurs</button>
+        </div>
+        <p id="message" role="status" hidden></p>
+      </section>
+    </div>
+  </main>
+<script>
+const straightTrack = [
+  [6, 38], [6, 29], [5, 25], [3, 21], [3, 17], [5, 13],
+  [9, 10], [9, 2], [21, 2], [21, 10], [20, 13], [16, 17],
+  [15, 20], [17, 24], [18, 29], [18, 38],
+];
+const straightCourse = {
+  width:24, height:39, boundaries:[straightTrack],
+  start:{ axis:'y',at:34,min:6,max:18,direction:-1 },
+  finish:{ axis:'y',at:7,min:9,max:21,direction:-1 },
+  grid:[[9,34],[11,34],[13,34],[15,34]], checkpoints:[],
+};
+const startFinish = { axis:'x',at:32,min:35.9,max:41,direction:-1 };
+const paperCourse = {
+  width:102, height:46,
+  boundaries:[
+    [[3,33],[3,9],[3.4,5.6],[4.5,4.1],[6,3.6],[13,3.3],[24,3.7],
+      [32,2.9],[44,2.8],[55,3],[63,2.6],[74,2.9],[86,2.5],[96.8,2.6],
+      [97.4,3.5],[97.3,6.3],[96.8,9],[97,14.8],[90,15],[79,14.4],
+      [70,14],[65.2,14],[65.7,15.5],[69,17.5],[74,19.8],[78,23],
+      [83,27.5],[87,30.8],[88.9,33.6],[88.8,35.8],[86,38],[81,39.5],
+      [73,40.5],[64,41.6],[56,42.4],[48,42.4],[40,41.4],[32,40.9],
+      [24,40.5],[17,39.9],[11,39.9],[5.4,39.1],[4.7,38],[4.1,36],[3,34.2]],
+    [[8.9,34.3],[8.5,30],[7.9,26],[7.7,19],[7.6,13],[8,8],[9,6.5],
+      [11,6],[22,6.5],[29,6.6],[40,7.4],[48,7],[59,6.9],[70,7.3],
+      [82,7.8],[93,7.8],[93,10.5],[88,10.9],[74,10.6],[62,10.5],
+      [59,11.1],[58,12.4],[58.2,14.4],[59.3,16.3],[62,18.5],[67,21.1],
+      [72,24.1],[77,27.3],[80,30],[81.6,33.8],[81.7,35.1],[79.5,36.6],
+      [77,37],[69,36.7],[56,36.8],[45,37],[37,36.6],[32,35.9],[23,35.8],
+      [16,35.6],[11,34.9]],
+  ],
+  start:startFinish, finish:startFinish, grid:[[32,37],[32,38],[32,39],[32,40]],
+  checkpoints:[
+    {axis:'y',at:23,min:3,max:8,direction:-1},
+    {axis:'x',at:52,min:2.8,max:7.2,direction:1},
+    {axis:'x',at:75,min:10.5,max:14.5,direction:-1},
+    {axis:'x',at:55,min:36.7,max:42.5,direction:-1},
+  ],
+};
+// Centre du ruban dans le sens de la course. Chaque portion rectiligne
+// est raccourcie aux deux extrémités par les raccords des virages.
+const spaSectors = [
+  [[13,42],[7,42],[5,40],[6,37],[14,34],[18,30],[23,30],[25,26]],
+  [[25,26],[37,20],[41,19],[43,15],[48,15],[52,12],[54,7],[51,5],[46,7]],
+  [[46,7],[40,10],[37,8],[32,9],[26,14],[18,16],[15,20],[17,23],[13,26]],
+  [[13,26],[10,25],[7,26],[3,30],[1,36],[2,43],[5,48],[10,50],[20,50],[25,47],[25,42],[22,39],[19,39],[18,42],[13,42]],
+];
+const spaNodes = spaSectors.flatMap(sector => sector.slice(0,-1));
+function spaEdges() {
+  const left=[], right=[];
+  spaNodes.forEach(([x,y],i) => {
+    const n=spaNodes.length;
+    const [px,py]=spaNodes[(i+n-1)%n], [nx,ny]=spaNodes[(i+1)%n];
+    const before=Math.hypot(x-px,y-py), after=Math.hypot(nx-x,ny-y);
+    const trim=Math.min(2.8,before*.45,after*.45);
+    const ax=x+(px-x)*trim/before, ay=y+(py-y)*trim/before;
+    const bx=x+(nx-x)*trim/after, by=y+(ny-y)*trim/after;
+    for(let j=0;j<=6;j++){
+      const t=j/6,u=1-t;
+      const cx=u*u*ax+2*u*t*x+t*t*bx, cy=u*u*ay+2*u*t*y+t*t*by;
+      const dx=u*(x-ax)+t*(bx-x),dy=u*(y-ay)+t*(by-y);
+      const halfWidth = Math.abs(cy-42)<.01 && cx>=7 && cx<=18 ? 2.1 : 1.7;
+      const scale=halfWidth/Math.hypot(dx,dy);
+      left.push([cx-dy*scale,cy+dx*scale]);
+      right.push([cx+dy*scale,cy-dx*scale]);
+    }
+  });
+  const area=ring=>Math.abs(ring.reduce((sum,[x,y],i)=>{const [a,b]=ring[(i+1)%ring.length];return sum+x*b-y*a},0));
+  return [left,right].sort((a,b)=>area(b)-area(a));
+}
+const spaLine={axis:'x',at:13,min:39.9,max:44.1,direction:-1};
+const spaCourse={
+  width:62,height:54,boundaries:spaEdges(),start:spaLine,finish:spaLine,
+  lapMarkers:[[14,46],[27,19],[47,11]],
+  grid:[[13,40],[13,41],[13,42],[13,43]],
+  checkpoints:[
+    {axis:'x',at:25,min:23,max:30,direction:1},
+    {axis:'x',at:46,min:4,max:10,direction:-1},
+    {axis:'x',at:13,min:23,max:28,direction:-1},
+  ],
+  kerbs:[[[12,26],[68,85],[111,123],[167,180]],[[23,35],[82,95],[133,145],[235,248]]],
+};
+const courseFor = room => ({paper:paperCourse,spa:spaCourse})[room?.course] ?? straightCourse;
+const paperSectors = [
+  [[32,38],[15,38],[7,37],[5,32],[5,23]],
+  [[5,23],[5,8],[7,5],[20,5],[52,5]],
+  [[52,5],[84,5],[94,5],[95,10],[95,12],[75,12]],
+  [[75,12],[64,13],[62,14],[66,18],[78,25],[85,33],[85,36],[76,39],[55,40]],
+  [[55,40],[40,39],[32,38]],
+];
+function sectorProgress(player, points) {
+  let travelled = 0;
+  let best = 0;
+  let closest = Infinity;
+  for (let i = 1; i < points.length; i++) {
+    const [x,y] = points[i-1];
+    const [nx,ny] = points[i];
+    const dx = nx-x, dy = ny-y;
+    const length = Math.hypot(dx,dy);
+    const t = Math.max(0,Math.min(1,((player.x-x)*dx+(player.y-y)*dy)/(length*length)));
+    const distance = Math.hypot(player.x-x-t*dx,player.y-y-t*dy);
+    if (distance < closest) {
+      closest = distance;
+      best = travelled+t*length;
+    }
+    travelled += length;
+  }
+  return best/travelled;
+}
+
+function standings(room) {
+  const sectors = {paper:paperSectors,spa:spaSectors}[room.course];
+  const order = room.players.map((player,index) => {
+    const sector = player.checkpoint ?? 0;
+    const progress = sectors ?
+      (player.laps ?? 0)*sectors.length+sector+sectorProgress(player,sectors[sector]) :
+      -player.y;
+    return {player,index,progress,finish:player.finish ?? -1};
+  }).sort((a,b) => b.finish-a.finish || b.progress-a.progress);
+  let rank = 1;
+  return order.map((item,index) => {
+    const previous = order[index-1];
+    if (previous && (item.finish !== previous.finish ||
+        item.finish < 0 && Math.abs(item.progress-previous.progress) > 1e-6)) rank = index+1;
+    return {...item,rank};
+  });
+}
+const colors = ['#f5bf63', '#64e2c3', '#ff829e', '#b5a4ff'];
+const steps = [-1, 0, 1].flatMap(y => [-1, 0, 1].map(x => [x,y]));
+const cross = (ax, ay, bx, by) => ax * by - ay * bx;
+const speedOf = (x, y) => Math.max(Math.abs(x), Math.abs(y));
+
+function onSegment(x, y, ax, ay, bx, by) {
+  return Math.abs(cross(x-ax, y-ay, bx-ax, by-ay)) < 1e-8 &&
+    x >= Math.min(ax,bx)-1e-8 && x <= Math.max(ax,bx)+1e-8 &&
+    y >= Math.min(ay,by)-1e-8 && y <= Math.max(ay,by)+1e-8;
+}
+
+function insideBoundary(x, y, track) {
+  let hit = false;
+  for (let i = 0, j = track.length-1; i < track.length; j = i++) {
+    const [ax, ay] = track[j], [bx, by] = track[i];
+    if (onSegment(x,y,ax,ay,bx,by)) return 0;
+    if ((ay > y) !== (by > y) && x < ax+(bx-ax)*(y-ay)/(by-ay)) hit = !hit;
+  }
+  return hit ? 1 : -1;
+}
+
+function inside(x, y, course = straightCourse) {
+  const [outer,...holes] = course.boundaries;
+  return insideBoundary(x,y,outer) >= 0 && holes.every(hole => insideBoundary(x,y,hole) <= 0);
+}
+
+function staysInside(ax, ay, bx, by, course) {
+  if (!inside(ax,ay,course) || !inside(bx,by,course)) return false;
+  if (ax === bx && ay === by) return true;
+  const dx = bx-ax, dy = by-ay;
+  const cuts = [0, 1];
+  for (const track of course.boundaries) for (let i = 0; i < track.length; i++) {
+    const [x,y] = track[i], [nx,ny] = track[(i+1)%track.length];
+    const ex = nx-x, ey = ny-y;
+    const denominator = cross(dx,dy,ex,ey);
+    if (!denominator) {
+      for (const [px,py] of [[x,y],[nx,ny]]) {
+        if (onSegment(px,py,ax,ay,bx,by)) cuts.push(dx ? (px-ax)/dx : (py-ay)/dy);
+      }
+      continue;
+    }
+    const t = cross(x-ax,y-ay,ex,ey)/denominator;
+    const u = cross(x-ax,y-ay,dx,dy)/denominator;
+    if (t > 0 && t < 1 && u >= 0 && u <= 1) cuts.push(t);
+  }
+  cuts.sort((a,b) => a-b);
+  return cuts.slice(1).every((t,i) => {
+    const mid = (cuts[i]+t)/2;
+    return inside(ax+mid*dx,ay+mid*dy,course);
+  });
+}
+
+function racer(name, token, index, course = straightCourse) {
+  const [x, y] = course.grid[index];
+  return { name, token, x, y, vx:0, vy:0, recovery:0, trail:[[x,y]], finish:null, laps:0, checkpoint:0 };
+}
+
+function options(room) {
+  const player = room.players[room.turn];
+  const course = courseFor(room);
+  const recovering = player.recovery > 0 || !inside(player.x,player.y,course);
+  const candidates = steps.flatMap(([dx,dy]) => {
+    const vx = recovering ? dx : player.vx+dx;
+    const vy = recovering ? dy : player.vy+dy;
+    const speed = speedOf(vx,vy);
+    const x = player.x+vx, y = player.y+vy;
+    if (speed < 1 || speed > 6) return [];
+    const blocked = room.players.some(other => other !== player &&
+      onSegment(other.x,other.y,player.x,player.y,x,y));
+    return [{ x,y,vx,vy,speed,blocked, center:!dx&&!dy,
+      offTrack: recovering ? !inside(x,y,course) : !staysInside(player.x,player.y,x,y,course) }];
+  });
+  const exits = candidates.filter(move => move.offTrack && !move.blocked);
+  const slowestExit = Math.min(...exits.map(move => move.speed));
+  return candidates.filter(move => !move.offTrack || move.speed === slowestExit);
+}
+
+function crossing(player, move, gate) {
+  const {axis,at,min,max,direction} = gate;
+  const from = (player[axis]-at)*direction;
+  const to = (move[axis]-at)*direction;
+  if (from > 0 || to <= 0) return null;
+  const across = axis === 'x' ? 'y' : 'x';
+  const intersection = player[across] + (move[across]-player[across])*(-from)/(to-from);
+  if (intersection < min || intersection > max) return null;
+  const point = axis === 'x' ? [at,intersection] : [intersection,at];
+  return {distance:to,point};
+}
+
+// Fermer le trajet sur la ligne permet de compter les tours même après
+// une sortie de piste ou un passage juste à côté d’un repère de classement.
+function completedCircuit(player, finishPoint, markers) {
+  const path = player.trail.slice(player.lapTrailStart ?? 0);
+  if (player.lapOrigin) path.unshift(player.lapOrigin);
+  path.push(finishPoint);
+  return markers.every(([mx,my]) => {
+    let winding = 0;
+    for (let i=0; i<path.length; i++) {
+      const [x,y] = path[i], [nx,ny] = path[(i+1)%path.length];
+      const side = (nx-x)*(my-y)-(ny-y)*(mx-x);
+      if (y <= my && ny > my && side > 0) winding++;
+      if (y > my && ny <= my && side < 0) winding--;
+    }
+    return winding < 0;
+  });
+}
+
+function countProgress(room, player, move, course) {
+  const next = player.checkpoint ?? 0;
+  if (next < course.checkpoints.length && crossing(player,move,course.checkpoints[next])) {
+    player.checkpoint = next+1;
+  }
+  const crossingLine = crossing(player,move,course.finish);
+  if (!crossingLine) return;
+  const complete = course.lapMarkers
+    ? completedCircuit(player,crossingLine.point,course.lapMarkers)
+    : player.checkpoint >= course.checkpoints.length;
+  if (complete) {
+    player.checkpoint = 0;
+    player.laps = (player.laps ?? 0)+1;
+    if (player.laps >= (room.lapGoal ?? 1)) {
+      player.finish = crossingLine.distance;
+    } else {
+      player.lapTrailStart = player.trail.length;
+      player.lapOrigin = crossingLine.point;
+      room.lastLap = {index:room.turn,laps:player.laps};
+    }
+  }
+}
+
+function play(room, x, y) {
+  const player = room.players[room.turn];
+  const choices = options(room).filter(move => !move.blocked);
+  const move = choices.find(choice => choice.x === x && choice.y === y);
+  if (!move && (choices.length || x !== null || y !== null)) return false;
+  if (move) {
+    const course = courseFor(room);
+    const recovering = player.recovery > 0 || !inside(player.x,player.y,course);
+    countProgress(room,player,move,course);
+    player.recovery = recovering ? Math.max(0,player.recovery-1) : move.offTrack ? 2 : 0;
+    Object.assign(player,{ x:move.x, y:move.y, vx:move.vx, vy:move.vy });
+    player.trail.push([move.x,move.y]);
+    (room.replay ??= []).push(room.turn);
+  }
+  room.turn += 1;
+  if (room.turn === room.players.length) {
+    room.turn = 0;
+    const best = Math.max(...room.players.map(driver => driver.finish ?? -1));
+    if (best >= 0) {
+      room.state = 'finished';
+      room.winners = room.players.flatMap((driver,index) => driver.finish === best ? [index] : []);
+    } else {
+      room.round += 1;
+    }
+  }
+  return true;
+}
+
+
+const byId = id => document.getElementById(id);
+const board = byId('board');
+const entry = byId('entry');
+const game = byId('game');
+const primary = byId('primary');
+const count = byId('driver-count');
+let room = null;
+let selected = null;
+let zoom = 0;
+const pending = false;
+let primaryAction = null;
+const names = ['Brice','Papa','Joueur 3','Joueur 4'];
+
+function refreshNames() {
+  const fields = byId('names');
+  for (const field of fields.querySelectorAll('input')) names[Number(field.dataset.index)] = field.value;
+  fields.replaceChildren();
+  for (let index=0; index<Number(count.value); index++) {
+    const label = document.createElement('label');
+    const field = document.createElement('input');
+    label.htmlFor = field.id = 'driver-'+index;
+    label.textContent = 'Joueur '+(index+1);
+    field.dataset.index = index;
+    field.value = names[index];
+    field.maxLength = 24;
+    field.required = true;
+    fields.append(label,field);
+  }
+}
+
+function startRace() {
+  stopReplay();
+  const players = Array.from(byId('names').querySelectorAll('input'),(field,index) =>
+    racer(field.value.trim() || 'Joueur '+(index+1),null,index,spaCourse));
+  const lapGoal = byId('lap-goal').value === '2' ? 2 : 1;
+  room = { course:'spa',lapGoal,players,turn:0,you:0,round:1,state:'racing',winners:[],
+    doubleConfirm:byId('double-confirm').checked };
+  selected = null;
+  camera = null;
+  zoom = 3;
+  render();
+}
+
+function svg(tag, attrs, parent = board) {
+  const node = document.createElementNS('http://www.w3.org/2000/svg',tag);
+  for (const [key,value] of Object.entries(attrs)) node.setAttribute(key,value);
+  parent.append(node);
+  return node;
+}
+
+const zoomSizes = [null,[30,24],[20,18],[14,16],[10,10]];
+let camera = null;
+
+function bindZoom() {
+  let previous = 3;
+  function changeZoom(level) {
+    if (zoom > 0) previous = zoom;
+    zoom = level;
+    render();
+  }
+  byId('zoom-out').addEventListener('click',() => changeZoom(Math.max(0,zoom-1)));
+  byId('zoom-in').addEventListener('click',() => changeZoom(Math.min(zoomSizes.length-1,zoom+1)));
+  byId('toggle-zoom').addEventListener('click',() => changeZoom(zoom ? 0 : previous));
+  byId('recenter-board').addEventListener('click',() => { camera = null; render(); });
+}
+
+function fieldBounds(course) {
+  // Reserve space for a maximum-speed move and the entire circular hit target.
+  const margin = 7;
+  let left = -margin, top = -margin;
+  let right = course.width+margin, bottom = course.height+margin;
+  for (const driver of room?.players ?? []) {
+    for (const [x,y] of driver.trail) {
+      left = Math.min(left,x-margin);
+      right = Math.max(right,x+margin);
+      top = Math.min(top,y-margin);
+      bottom = Math.max(bottom,y+margin);
+    }
+  }
+  return {x:left,y:top,width:right-left,height:bottom-top};
+}
+
+function fullView(target, field) {
+  target.setAttribute('viewBox',[field.x,field.y,field.width,field.height].join(' '));
+}
+
+function setViewport(course, width, height, center) {
+  const field = fieldBounds(course);
+  const x = Math.max(field.x,Math.min(field.x+field.width-width,center.x-width/2));
+  const y = Math.max(field.y,Math.min(field.y+field.height-height,center.y-height/2));
+  board.setAttribute('viewBox',[x,y,width,height].join(' '));
+  syncMapFrame();
+  return {x:x+width/2,y:y+height/2};
+}
+
+function bindPan() {
+  let gesture = null;
+  let suppressClick = false;
+  const canPan = () => zoom && room?.state === 'racing';
+
+  function pan(dx,dy) {
+    const {x,y,width,height} = board.viewBox.baseVal;
+    camera = setViewport(courseFor(room),width,height,{x:x+width/2+dx,y:y+height/2+dy});
+    byId('recenter-board').hidden = false;
+  }
+  board.addEventListener('pointerdown',event => {
+    if (event.button !== 0 || !event.isPrimary) return;
+    suppressClick = false;
+    if (canPan()) gesture = {id:event.pointerId,x:event.clientX,y:event.clientY,dragging:false};
+  });
+  board.addEventListener('pointermove',event => {
+    if (gesture?.id !== event.pointerId || !canPan()) return;
+    const dx = event.clientX-gesture.x;
+    const dy = event.clientY-gesture.y;
+    if (!gesture.dragging && Math.hypot(dx,dy) < 6) return;
+    const transform = board.getScreenCTM();
+    if (!transform) return;
+    if (!gesture.dragging) {
+      gesture.dragging = true;
+      suppressClick = true;
+      lastChoicePress = null;
+      board.setPointerCapture(event.pointerId);
+      board.setAttribute('data-dragging','');
+    }
+    pan(-dx/transform.a,-dy/transform.d);
+    gesture.x = event.clientX;
+    gesture.y = event.clientY;
+  });
+  function end(event) {
+    if (gesture?.id !== event.pointerId) return;
+    gesture = null;
+    board.removeAttribute('data-dragging');
+  }
+  for (const type of ['pointerup','pointercancel','lostpointercapture']) board.addEventListener(type,end);
+  board.addEventListener('click',event => {
+    if (!suppressClick) return;
+    suppressClick = false;
+    event.stopPropagation();
+  },true);
+  board.addEventListener('keydown',event => {
+    if (event.target !== board || !canPan()) return;
+    const offset = {ArrowLeft:[-2,0],ArrowRight:[2,0],ArrowUp:[0,-2],ArrowDown:[0,2]}[event.key];
+    if (!offset) return;
+    event.preventDefault();
+    pan(...offset);
+  });
+}
+
+function trackPath(points) {
+  return 'M '+points.map(point => point.join(',')).join(' L ');
+}
+
+function drawSurface(course, target = board) {
+  const {boundaries} = course;
+  const field = fieldBounds(course);
+  const prefix = target.id === 'replay-board' ? 'replay-' : '';
+  const defs = svg('defs',{},target);
+  const grid = svg('pattern',{id:prefix+'grid',width:1,height:1,patternUnits:'userSpaceOnUse'},defs);
+  svg('path',{d:'M 0 1 V 0 H 1',fill:'none',stroke:'#b2c7ce','stroke-width':.065,opacity:.35},grid);
+  const grass = svg('pattern',{id:prefix+'grass',width:4,height:4,patternUnits:'userSpaceOnUse',patternTransform:'rotate(35)'},defs);
+  svg('rect',{width:4,height:4,fill:'#192a25'},grass);
+  svg('rect',{width:2,height:4,fill:'#22342b'},grass);
+  const outline = boundaries.map(points => trackPath(points)+' Z').join(' ');
+  const clip = svg('clipPath',{id:prefix+'asphalt-clip'},defs);
+  svg('path',{d:outline,'clip-rule':'evenodd'},clip);
+  svg('rect',{...field,fill:`url(#${prefix}grass)`},target);
+  const rail = {d:outline,fill:'none','stroke-linejoin':'round'};
+  svg('path',{...rail,stroke:'#101918','stroke-width':.9},target);
+  svg('path',{...rail,stroke:'#65737a','stroke-width':.58},target);
+  svg('path',{...rail,stroke:'#a3aeb0','stroke-width':.37},target);
+  svg('path',{...rail,stroke:'#344448','stroke-width':.61,'stroke-dasharray':'.11 1.35'},target);
+  svg('path',{d:outline,fill:'#303940','fill-rule':'evenodd'},target);
+  svg('rect',{...field,fill:`url(#${prefix}grid)`},target);
+  svg('path',{...rail,stroke:'#c2ccc9','stroke-width':.10},target);
+  if (boundaries.length !== 2) return;
+
+  const kerbs = svg('g',{'clip-path':`url(#${prefix}asphalt-clip)`},target);
+  const corners = course.kerbs ?? [[[1,5],[16,21],[24,29],[29,34],[42,48]],[[4,8],[13,17],[19,24],[29,35]]];
+  boundaries.forEach((points,index) => {
+    for (const [from,to] of corners[index]) {
+      const corner = {d:trackPath(points.slice(from,to)),fill:'none','stroke-width':.65,'stroke-linejoin':'round'};
+      svg('path',{...corner,stroke:'#ddd9ca'},kerbs);
+      svg('path',{...corner,stroke:'#ba463c','stroke-dasharray':'.65 .65'},kerbs);
+    }
+  });
+}
+
+function draw(active, choices) {
+  board.replaceChildren();
+  const course = spaCourse;
+  const {width,height,start,finish,grid:startingPositions} = course;
+  if (zoom && active) {
+    const [zoomWidth,zoomHeight] = zoomSizes[zoom];
+    const viewWidth = Math.min(width+1.2,zoomWidth);
+    const viewHeight = Math.min(height+1.2,zoomHeight);
+    const recovering = active.recovery || !inside(active.x,active.y,course);
+    const center = {x:active.x+(recovering ? 0 : active.vx/2),y:active.y+(recovering ? 0 : active.vy/2)};
+    setViewport(course,viewWidth,viewHeight,camera ?? center);
+  } else {
+    fullView(board,fieldBounds(course));
+  }
+  board.setAttribute('data-overview',String(!(zoom && active)));
+  drawSurface(course);
+  const gates = start === finish ? [[finish,'#f5bf63']] : [[start,'#a6f2d7'],[finish,'#f5bf63']];
+  for (const [line,color] of gates) {
+    const endpoints = line.axis === 'x' ? {x1:line.at,x2:line.at,y1:line.min,y2:line.max} :
+      {x1:line.min,x2:line.max,y1:line.at,y2:line.at};
+    if (start === finish) {
+      svg('line',{...endpoints,stroke:'#121a1e','stroke-width':.54});
+      for (const side of [-1,1]) {
+        const x = line.at+side*.13;
+        svg('line',{...endpoints,x1:x,x2:x,stroke:'#f2eee2','stroke-width':.26,
+          'stroke-dasharray':'.26 .26','stroke-dashoffset':side < 0 ? 0 : .26});
+      }
+      svg('path',{d:`M ${line.at-1} ${line.min-.75} h -2 m 1 -.65 l -1 .65 1 .65`,
+        fill:'none',stroke:color,'stroke-width':.24,'stroke-linecap':'round','stroke-linejoin':'round'});
+    } else {
+      svg('line',{...endpoints,stroke:color,'stroke-dasharray':'.54 .24','stroke-width':.25});
+    }
+  }
+  const checkpoint = active && course.checkpoints[active.checkpoint ?? 0];
+  if (checkpoint && room.course === 'spa') {
+    const {axis,at,min,max} = checkpoint;
+    const endpoints = axis === 'x' ? {x1:at,x2:at,y1:min,y2:max} : {x1:min,x2:max,y1:at,y2:at};
+    svg('line',{...endpoints,stroke:'#a6f2d7','stroke-opacity':.78,'stroke-dasharray':'.18 .21','stroke-width':.12});
+  }
+  const drivers = room?.players ?? [];
+  if (room?.state === 'lobby' || !room) {
+    startingPositions.forEach(([cx,cy],i) => svg('circle',{cx,cy,r:.25,fill:colors[i],opacity:.6}));
+  }
+  drivers.forEach((driver,index) => {
+    const trail = driver.trail.slice(driver.lapTrailStart ?? 0);
+    const visibleLine = driver.lapOrigin ? [driver.lapOrigin,...trail] : trail;
+    svg('polyline',{ points:visibleLine.map(point => point.join(',')).join(' '), fill:'none',
+      stroke:colors[index],'stroke-width':.14,'stroke-linejoin':'round',opacity:.74 });
+    for (const [x,y] of trail.slice(0,-1)) {
+      svg('path',{ d:`M ${x-.12} ${y-.12} l .24 .24 m -.24 0 l .24 -.24`, stroke:colors[index],'stroke-width':.07 });
+    }
+  });
+  drivers.forEach((driver,index) => {
+    svg('circle',{cx:driver.x,cy:driver.y,r:driver===active ? .37 : .29,
+      fill:colors[index],stroke:'#102029','stroke-width':.09});
+  });
+  for (const choice of choices) {
+    const attributes = { transform:`translate(${choice.x} ${choice.y})` };
+    const color = choice.blocked ? '#a6b2b7' : colors[room.turn];
+    const chosen = choice.x === selected?.x && choice.y === selected?.y;
+    if (!choice.blocked) Object.assign(attributes,{
+      class:'choice',role:'button',tabindex:0,'aria-label':`Case ${choice.x}, ${choice.y}, vitesse ${choice.speed}${choice.offTrack ? ', hors piste' : ''}`,
+      'aria-pressed':chosen,
+    });
+    const marker = svg('g',attributes);
+    svg('rect',{x:-.49,y:-.49,width:.98,height:.98,fill:'transparent'},marker);
+    svg('circle',{class:'choice-ring',r:choice.center ? .42 : .34,fill:'#101d22','fill-opacity':.28,
+      stroke:color,'stroke-opacity':chosen ? 1 : .75,
+      ...(choice.offTrack && !choice.blocked ? {'stroke-dasharray':'.16 .10'} : {}),
+      'stroke-width':chosen ? .16 : choice.center ? .13 : .08},marker);
+    const label = svg('text',{y:.15,'text-anchor':'middle',fill:color,'fill-opacity':chosen ? 1 : .68,
+      'font-size':.46,'font-weight':750,'pointer-events':'none'},marker);
+    label.textContent = choice.blocked ? '×' : choice.speed;
+    if (choice.blocked) continue;
+    const choose = (pressTime = null) => {
+      if (pending) return;
+      const previous = lastChoicePress;
+      const isDoublePress = room.doubleConfirm && pressTime !== null && previous?.room === room &&
+        previous.turn === room.turn && previous.round === room.round &&
+        previous.x === choice.x && previous.y === choice.y &&
+        pressTime >= previous.time && pressTime-previous.time <= 450;
+      lastChoicePress = pressTime === null ? null :
+        {room,turn:room.turn,round:room.round,x:choice.x,y:choice.y,time:pressTime};
+      selected = choice;
+      if (isDoublePress) {
+        confirmMove();
+        return;
+      }
+      render();
+      if (pressTime === null) board.querySelector('[aria-pressed="true"]')?.focus({preventScroll:true});
+    };
+    marker.addEventListener('click',event => choose(event.timeStamp));
+    marker.addEventListener('keydown',event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        choose();
+      }
+    });
+  }
+}
+
+function syncMapFrame() {
+  const frame = byId('map-frame');
+  if (!frame) return;
+  const viewport = replayRun ? byId('replay-board') : board;
+  const {x,y,width,height} = viewport.viewBox.baseVal;
+  for (const [name,value] of Object.entries({x,y,width,height})) frame.setAttribute(name,value);
+}
+
+function drawMinimap(course) {
+  const map = byId('minimap');
+  map.replaceChildren();
+  fullView(map,fieldBounds(course));
+  map.setAttribute('data-can-pan',String(room.state === 'racing'));
+  const outline = course.boundaries.map(points => trackPath(points)+' Z').join(' ');
+  svg('path',{d:outline,fill:'#627473','fill-rule':'evenodd',stroke:'#92a09c','stroke-width':.28},map);
+  svg('rect',{id:'map-frame',fill:'#e7f5ef','fill-opacity':.10,stroke:'#e7f5ef','stroke-width':.45},map);
+  room.players.forEach((player,index) => {
+    svg('circle',{id:'map-car-'+index,cx:player.x,cy:player.y,r:index === room.turn ? 1.05 : .77,
+      fill:colors[index],stroke:'#152729','stroke-width':.24},map);
+  });
+  syncMapFrame();
+}
+
+function bindMinimap() {
+  const map = byId('minimap');
+  map.addEventListener('click',event => {
+    if (room?.state !== 'racing') return;
+    const transform = map.getScreenCTM();
+    if (!transform) return;
+    camera = new DOMPoint(event.clientX,event.clientY).matrixTransform(transform.inverse());
+    if (!zoom) zoom = 3;
+    render();
+  });
+}
+
+function drawFormulaCar(parent, color) {
+  const car = svg('g',{},parent);
+  for (const x of [-.92,.47]) {
+    for (const y of [-.66,.36]) {
+      svg('rect',{x,y,width:.47,height:.30,rx:.08,fill:'#11181d',stroke:'#727e83','stroke-width':.05},car);
+    }
+  }
+  svg('path',{d:'M -1.18 -.62 H -.91 V -.26 H -.52 L -.40 -.40 H .42 L .54 -.17 H .98 V -.62 H 1.2 V .62 H .98 V .17 H .54 L .42 .40 H -.40 L -.52 .26 H -.91 V .62 H -1.18 Z',
+    fill:color,stroke:'#182227','stroke-width':.06,'stroke-linejoin':'round'},car);
+  svg('ellipse',{cx:-.12,cy:0,rx:.26,ry:.16,fill:'#152027'},car);
+  return car;
+}
+
+let replayRun = null;
+function replayAvailable() {
+  return room?.state === 'finished' && room.replay?.length > 0 &&
+    room.replay.length === room.players.reduce((total,player) => total+player.trail.length-1,0);
+}
+
+function updateReplayControls() {
+  const running = replayRun !== null;
+  board.toggleAttribute('hidden',running);
+  byId('replay-board').toggleAttribute('hidden',!running);
+  byId('replay-controls').hidden = !replayAvailable();
+  byId('replay-toggle').textContent = running ? 'Quitter le replay' : 'Voir le replay';
+  byId('replay-pause').hidden = !running;
+  byId('replay-pause').textContent = replayRun?.paused ? 'Reprendre' : 'Pause';
+  syncMapFrame();
+}
+
+function stopReplay() {
+  if (!replayRun) return;
+  cancelAnimationFrame(replayRun.frame);
+  replayRun = null;
+  updateReplayControls();
+  if (room && room.state !== 'lobby') drawMinimap(courseFor(room));
+}
+
+function playFinishedReplay() {
+  if (replayAvailable() && !matchMedia('(prefers-reduced-motion: reduce)').matches) startReplay();
+}
+
+function makeReplayPath(trail) {
+  const anchors = trail.filter(([x,y],index) => !index || x !== trail[index-1][0] || y !== trail[index-1][1]);
+  const samples = [{x:anchors[0][0],y:anchors[0][1],distance:0}];
+  const waypoints = [0];
+  function add(x,y) {
+    const previous = samples.at(-1);
+    const length = Math.hypot(x-previous.x,y-previous.y);
+    if (length > 1e-8) samples.push({x,y,distance:previous.distance+length});
+    return samples.at(-1).distance;
+  }
+  for (let index = 1; index < anchors.length-1; index++) {
+    const [x,y] = anchors[index];
+    const [px,py] = anchors[index-1];
+    const [nx,ny] = anchors[index+1];
+    const incoming = Math.hypot(px-x,py-y);
+    const outgoing = Math.hypot(nx-x,ny-y);
+    const radius = Math.min(.85,incoming*.32,outgoing*.32);
+    const ax = x+(px-x)*radius/incoming, ay = y+(py-y)*radius/incoming;
+    const bx = x+(nx-x)*radius/outgoing, by = y+(ny-y)*radius/outgoing;
+    add(ax,ay);
+    for (let step = 1; step <= 8; step++) {
+      const t = step/8, u = 1-t;
+      const distance = add(u*u*ax+2*u*t*x+t*t*bx,u*u*ay+2*u*t*y+t*t*by);
+      if (step === 4) waypoints.push(distance);
+    }
+  }
+  if (anchors.length > 1) waypoints.push(add(...anchors.at(-1)));
+  const length = samples.at(-1).distance;
+
+  function locate(distance) {
+    if (distance <= 0) return samples[0];
+    if (distance >= length) return samples.at(-1);
+    let lo = 0, hi = samples.length-1;
+    while (hi-lo > 1) {
+      const mid = Math.floor((lo+hi)/2);
+      if (samples[mid].distance <= distance) lo = mid;
+      else hi = mid;
+    }
+    const a = samples[lo], b = samples[hi];
+    const t = (distance-a.distance)/(b.distance-a.distance);
+    return {x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};
+  }
+  return {
+    moves:waypoints.length-1,
+    pose(time, heading) {
+      const move = Math.floor(time);
+      const from = waypoints[move] ?? length;
+      const to = waypoints[move+1] ?? length;
+      const distance = from+(to-from)*(time-move);
+      const {x,y} = locate(distance);
+      const before = locate(distance-.14);
+      const after = locate(distance+.14);
+      const dx = after.x-before.x, dy = after.y-before.y;
+      return {x,y,heading:Math.hypot(dx,dy) > 1e-6 ? Math.atan2(dy,dx)*180/Math.PI : heading};
+    },
+  };
+}
+
+function startReplay() {
+  if (!replayAvailable() || replayRun) return;
+  const scene = byId('replay-board');
+  const {width,height,finish} = courseFor(room);
+  scene.replaceChildren();
+  fullView(scene,fieldBounds(courseFor(room)));
+  drawSurface(courseFor(room),scene);
+  const finishLine = finish.axis === 'x' ? {x1:finish.at,x2:finish.at,y1:finish.min,y2:finish.max} :
+    {x1:finish.min,x2:finish.max,y1:finish.at,y2:finish.at};
+  svg('line',{...finishLine,stroke:'#f2eee2','stroke-width':.38,'stroke-dasharray':'.30 .23'},scene);
+  const players = room.players;
+  const cars = players.map((_,index) => drawFormulaCar(scene,colors[index]));
+  const paths = players.map(player => makeReplayPath(player.trail));
+  const moves = Math.max(...paths.map(path => path.moves));
+  const duration = Math.max(1400,Math.min(16000,moves*235));
+  const headings = players.map(() => courseFor(room).start.axis === 'x' ? 180 : -90);
+  const run = {frame:0,paused:false,last:null,elapsed:0,tick:null};
+  replayRun = run;
+
+  function positionCar(path,index,time) {
+    const {x,y,heading} = path.pose(time,headings[index]);
+    headings[index] = heading;
+    cars[index].setAttribute('transform',`translate(${x} ${y}) rotate(${heading}) scale(1.55)`);
+    const dot = byId('map-car-'+index);
+    dot?.setAttribute('cx',x);
+    dot?.setAttribute('cy',y);
+  }
+  paths.forEach((path,index) => positionCar(path,index,0));
+  run.tick = timestamp => {
+    if (replayRun !== run || run.paused) return;
+    if (run.last !== null) run.elapsed += Math.min(timestamp-run.last,100);
+    run.last = timestamp;
+    const progress = Math.min(1,run.elapsed/duration);
+    paths.forEach((path,index) => positionCar(path,index,progress*path.moves));
+    if (run.elapsed >= duration+1300) {
+      stopReplay();
+    } else {
+      run.frame = requestAnimationFrame(run.tick);
+    }
+  };
+  updateReplayControls();
+  run.frame = requestAnimationFrame(run.tick);
+}
+
+function bindReplay() {
+  byId('replay-toggle').addEventListener('click',() => {
+    if (replayRun) stopReplay();
+    else startReplay();
+  });
+  byId('replay-pause').addEventListener('click',() => {
+    if (!replayRun) return;
+    replayRun.paused = !replayRun.paused;
+    if (replayRun.paused) cancelAnimationFrame(replayRun.frame);
+    else {
+      replayRun.last = null;
+      replayRun.frame = requestAnimationFrame(replayRun.tick);
+    }
+    updateReplayControls();
+  });
+}
+
+function layoutRaceControls(racing) {
+  byId('race-hud').hidden = !racing;
+  byId('race-dock').hidden = !racing;
+  for (const [node,inRace,outsideRace] of [
+    ['players','race-positions','result-positions'],
+    ['minimap-panel','race-map','result-map'],
+    ['turn-controls','race-dock','result-turn'],
+    ['message','race-dock','control-panel'],
+  ]) {
+    const element = byId(node);
+    const destination = byId(racing ? inRace : outsideRace);
+    if (element.parentNode !== destination) destination.append(element);
+  }
+}
+
+function render() {
+  entry.hidden = Boolean(room);
+  game.hidden = !room;
+  const racing = room?.state === 'racing';
+  document.querySelector('.shell').classList.toggle('playing',racing);
+  layoutRaceControls(racing);
+  for (const button of entry.querySelectorAll('button')) button.disabled = pending;
+  const active = room?.state === 'racing' ? room.players[room.turn] : null;
+  const course = courseFor(room);
+  const myTurn = active && room.you === room.turn;
+  const choices = myTurn ? options(room) : [];
+  byId('zoom-controls').hidden = !active;
+  byId('zoom-out').disabled = zoom === 0;
+  byId('zoom-in').disabled = zoom === zoomSizes.length-1;
+  byId('toggle-zoom').textContent = zoom ? 'Vue entière' : 'Recentrer';
+  byId('recenter-board').hidden = !active || !zoom || camera === null;
+  draw(active,choices);
+  updateReplayControls();
+  if (!room) return;
+  const lobby = byId('lobby-heading');
+  if (lobby) lobby.hidden = room.state !== 'lobby';
+  byId('leave').hidden = room.state === 'racing';
+  byId('minimap-panel').hidden = room.state === 'lobby';
+  if (room.state !== 'lobby') drawMinimap(course);
+  const list = byId('players');
+  list.replaceChildren();
+  const ordered = room.state === 'lobby' ? room.players.map((player,index) => ({player,index})) : standings(room);
+  ordered.forEach(({player,index,rank}) => {
+    const row = document.createElement('li');
+    row.classList.toggle('active',player===active);
+    const marker = document.createElement('i');
+    marker.style.backgroundColor = colors[index];
+    const name = document.createElement('span');
+    name.textContent = player.name;
+    const speed = document.createElement('span');
+    speed.textContent = room.state === 'lobby' ? (index === 0 ? 'Hôte' : 'Prêt') :
+      'Vitesse '+(player.recovery ? 1 : Math.max(Math.abs(player.vx),Math.abs(player.vy)));
+    if (room.lapGoal) speed.textContent = `${player.laps}/${room.lapGoal} tours · ${speed.textContent}`;
+    if (rank) {
+      const position = document.createElement('strong');
+      position.className = 'position';
+      position.textContent = rank === 1 ? '1er' : rank+'e';
+      row.append(position);
+    }
+    row.append(marker,name,speed);
+    list.append(row);
+  });
+  const status = byId('status');
+  const roundCount = byId('round-count');
+  const lapNotice = byId('lap-notice');
+  const lastLap = room.state === 'racing' ? room.lastLap : null;
+  lapNotice.hidden = !lastLap;
+  lapNotice.textContent = lastLap ?
+    `${room.players[lastLap.index].name} boucle le tour ${lastLap.laps}/${room.lapGoal}.` : '';
+  const completedRounds = room.state === 'finished' ? room.round : room.round-1;
+  roundCount.hidden = room.state === 'lobby';
+  roundCount.textContent = `Manches terminées · ${completedRounds}`;
+  if (active) {
+    const total = room.lapGoal ?? 1;
+    byId('race-round').textContent = completedRounds;
+    byId('race-lap').textContent = `${Math.min((active.laps ?? 0)+1,total)}/${total}`;
+  }
+  const hint = byId('hint');
+  primary.hidden = true;
+  primaryAction = null;
+  const showButton = (label,action,disabled = false) => {
+    primary.hidden = false;
+    primary.textContent = label;
+    primary.disabled = pending || disabled;
+    primaryAction = action;
+  };
+  if (room.state === 'lobby') {
+    status.textContent = room.players.length+' joueur'+(room.players.length === 1 ? '' : 's')+' sur 4';
+    hint.textContent = room.you === 0 ? 'Envoie le lien à tes adversaires. Dès qu’une personne a rejoint, tu peux lancer la course.' : 'En attente du départ.';
+    if (room.you === 0) showButton('Lancer la course','start',room.players.length < 2);
+  } else if (room.state === 'finished') {
+    const names = room.winners.map(index => room.players[index].name).join(' et ');
+    status.textContent = room.winners.length > 1 ? 'Égalité · '+names : names+' remporte la course';
+    const distance = room.players[room.winners[0]].finish;
+    hint.textContent = `Manche ${room.round} · ${distance} ${distance === 1 ? 'case' : 'cases'} après la ligne.`;
+    if (room.you === 0) showButton('Rejouer','restart');
+  } else {
+    status.textContent = 'Au tour de '+active.name;
+    const canMove = choices.some(choice => !choice.blocked);
+    hint.textContent = '';
+    if (myTurn) {
+      hint.textContent = !canMove ? 'Toutes les destinations sont bloquées.' :
+        selected?.offTrack ? 'Ce point termine hors piste ou le trait franchit le bord.' :
+        active.recovery ? `Retour en première · ${active.recovery} déplacement(s) d’une case.` :
+        !inside(active.x,active.y,course) ? 'Reviens sur la piste à vitesse 1.' : 'Choisis une intersection sur la grille.';
+      if (room.players.some(player => player.finish !== null)) {
+        hint.textContent = 'Arrivée franchie. Finissez la manche. '+hint.textContent;
+      }
+      if (selected && room.doubleConfirm) hint.textContent += ' Deux pressions rapides sur la même case valident le coup.';
+      showButton(canMove ? 'Valider le déplacement' : 'Passer le tour','move',canMove&&!selected);
+    }
+  }
+}
+
+
+
+entry.addEventListener('submit',event => {
+  event.preventDefault();
+  startRace();
+});
+count.addEventListener('change',refreshNames);
+let lastChoicePress = null;
+function confirmMove() {
+  if (primaryAction !== 'move' || !play(room,selected?.x ?? null,selected?.y ?? null)) return;
+  lastChoicePress = null;
+  room.you = room.turn;
+  selected = null;
+  camera = null;
+  render();
+  if (room.state === 'finished') playFinishedReplay();
+}
+primary.addEventListener('click',() => {
+  if (primaryAction === 'restart') {
+    startRace();
+  } else {
+    confirmMove();
+  }
+});
+bindZoom();
+bindPan();
+bindMinimap();
+bindReplay();
+byId('leave').addEventListener('click',() => {
+  stopReplay();
+  room = null;
+  selected = null;
+  camera = null;
+  zoom = 0;
+  render();
+});
+refreshNames();
+render();
+
+</script>
+</body>
+</html>
