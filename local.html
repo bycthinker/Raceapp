@@ -116,7 +116,7 @@ select{font:inherit;min-height:42px;border:1px solid var(--edge);border-radius:1
 .panel form p{font-size:.9rem}
 .shell .circuit svg[data-overview="true"]{height:auto;min-height:0;max-height:none;aspect-ratio:63.2/55.2}
 .shell #replay-board{aspect-ratio:63.2/55.2}
-</style><style>.race-nav{display:flex;align-items:center;gap:14px;max-width:1100px;margin:auto;padding:6px 16px}.race-nav a{color:#bde4cc}.race-nav button{width:auto;min-height:36px;padding:5px 12px}</style><script>// Une entrée par course et par siège. Actualiser l'écran conserve le même résultat.
+</style><style>.race-nav{display:flex;align-items:center;gap:14px;max-width:1100px;margin:auto;padding:6px 16px}.race-nav a{color:#bde4cc}.race-nav button{width:auto;min-height:36px;padding:5px 12px}</style><script src="atelier-core.js"></script><script>// Une entrée par course et par siège. Actualiser l'écran conserve le même résultat.
 function recordRace(room, label, indexes){
   if(!room || room.state==='lobby' || !room.raceId || label==='Tutoriel')return;
   for(const i of indexes){
@@ -413,7 +413,13 @@ function seasonEdges(nodes,sx,sy){
 const seasonCourses=Object.fromEntries(seasonDefinitions.map(d=>[d.id,buildSeasonCourse(d)]));
 function fillCoursePicker(picker){
   for(const course of Object.values(seasonCourses))picker.add(new Option(course.id.slice(1)+" · "+course.name,course.id));
-  picker.value='r10';
+  const group=document.createElement('optgroup');group.label='Mes circuits';
+  for(const d of RaceAtelier.list()){
+    try{const course=RaceAtelier.build(d);seasonCourses[d.id]=course;group.append(new Option(course.name,d.id));}catch{}
+  }
+  if(group.children.length)picker.append(group);
+  const requested=new URLSearchParams(location.search).get('circuit');
+  picker.value=requested && Object.hasOwn(seasonCourses,requested)?requested:'r10';
 }
 const courseFor = room => Object.hasOwn(seasonCourses,room?.course) ? seasonCourses[room.course] : ({paper:paperCourse,spa:spaCourse,oval:ovalCourse})[room?.course] ?? straightCourse;
 const paperSectors = [
@@ -644,6 +650,9 @@ const entry = byId('entry');
 const game = byId('game');
 const primary = byId('primary');
 const count = byId('driver-count');
+if(location.protocol==='file:' && location.hash.startsWith('#dessin=')){
+  try{const d=JSON.parse(decodeURIComponent(location.hash.slice(8)));RaceAtelier.build(d);RaceAtelier.save(d)}catch{}
+}
 const trackPicker=byId('track');fillCoursePicker(trackPicker);
 trackPicker.addEventListener('change',()=>render());
 let room = null;

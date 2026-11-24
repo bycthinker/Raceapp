@@ -31,14 +31,18 @@ export async function api(request, store) {
     const [,code,action] = match;
     const token = request.headers.get('Authorization')?.replace(/^Bearer /,'');
     if (request.method === 'POST' && !code) {
-      const { name,lapGoal,course="r10" } = await request.json();
-      if(!Object.hasOwn(seasonCourses,course))throw new GameError('Circuit inconnu.');
+      const { name,lapGoal,course="r10",design } = await request.json();
+      let selected;
+      if(typeof course==='string' && /^perso-[a-z0-9-]{1,64}$/i.test(course) && design?.id===course){
+        try{selected=courseFor({design})}catch(e){throw new GameError(e.message)}
+      }else if(Object.hasOwn(seasonCourses,course)&&!design)selected=seasonCourses[course];
+      else throw new GameError('Circuit inconnu.');
       const newToken = crypto.randomUUID();
-      const player = racer(playerName(name),newToken,0,seasonCourses[course]);
+      const player = racer(playerName(name),newToken,0,selected);
       for (let attempt = 0; attempt < 8; attempt++) {
         const roomCode = Array.from(crypto.getRandomValues(new Uint8Array(6)),
           byte => codeAlphabet[byte % codeAlphabet.length]).join('');
-        const room = { code:roomCode,course,lapGoal:lapGoal===2?2:1, revision:0, state:'lobby', turn:0, round:1, players:[player], winners:[] };
+        const room = { code:roomCode,course,...(design?{design}:{}),lapGoal:lapGoal===2?2:1, revision:0, state:'lobby', turn:0, round:1, players:[player], winners:[] };
         if (await store.insert(room)) return json({ room:view(room,newToken), token:newToken },201);
       }
       throw new GameError('Création impossible. Réessaie.',503);

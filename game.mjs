@@ -1,4 +1,5 @@
 
+import './atelier-core.js';
 const straightTrack = [
   [6, 38], [6, 29], [5, 25], [3, 21], [3, 17], [5, 13],
   [9, 10], [9, 2], [21, 2], [21, 10], [20, 13], [16, 17],
@@ -177,9 +178,25 @@ function seasonEdges(nodes,sx,sy){
 const seasonCourses=Object.fromEntries(seasonDefinitions.map(d=>[d.id,buildSeasonCourse(d)]));
 function fillCoursePicker(picker){
   for(const course of Object.values(seasonCourses))picker.add(new Option(course.id.slice(1)+" · "+course.name,course.id));
-  picker.value='r10';
+  const group=document.createElement('optgroup');group.label='Mes circuits';
+  for(const d of RaceAtelier.list()){
+    try{const course=RaceAtelier.build(d);seasonCourses[d.id]=course;group.append(new Option(course.name,d.id));}catch{}
+  }
+  if(group.children.length)picker.append(group);
+  const requested=new URLSearchParams(location.search).get('circuit');
+  picker.value=requested && Object.hasOwn(seasonCourses,requested)?requested:'r10';
 }
-const courseFor = room => Object.hasOwn(seasonCourses,room?.course) ? seasonCourses[room.course] : ({paper:paperCourse,spa:spaCourse})[room?.course] ?? straightCourse;
+const customCache=new Map();
+function customCourse(d){
+  const key=JSON.stringify(d);
+  if(!customCache.has(key)){
+    const c=RaceAtelier.build(d);
+    if(customCache.size>=32)customCache.delete(customCache.keys().next().value);
+    customCache.set(key,c);
+  }
+  return customCache.get(key);
+}
+const courseFor = room => room?.design ? customCourse(room.design) : Object.hasOwn(seasonCourses,room?.course) ? seasonCourses[room.course] : ({paper:paperCourse,spa:spaCourse})[room?.course] ?? straightCourse;
 const paperSectors = [
   [[32,38],[15,38],[7,37],[5,32],[5,23]],
   [[5,23],[5,8],[7,5],[20,5],[52,5]],

@@ -20,6 +20,9 @@ const files = new Map([
   ['/stats',['stats.html','text/html; charset=utf-8']],
   ['/guide.css',['guide.css','text/css']],
   ['/stats.js',['stats.js','text/javascript']],
+  ['/atelier',['atelier.html','text/html; charset=utf-8']],
+  ['/atelier.js',['atelier.js','text/javascript']],
+  ['/atelier-core.js',['atelier-core.js','text/javascript']],
   ['/online',['online.html','text/html; charset=utf-8']],
   ['/local.html',['local.html','text/html; charset=utf-8']],
   ['/app.mjs',['app.mjs','text/javascript; charset=utf-8']],
@@ -37,10 +40,10 @@ createServer(async (incoming,outgoing) => {
         let size = 0;
         for await (const chunk of incoming) {
           size += chunk.length;
-          if (size > 4096) break;
+          if (size > 24576) break;
           chunks.push(chunk);
         }
-        if (size > 4096) {
+        if (size > 24576) {
           outgoing.writeHead(413).end();
           return;
         }

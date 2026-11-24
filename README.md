@@ -38,3 +38,7 @@ Avec Node.js 24, ouvrir un terminal dans le dossier qui contient package.json et
 Le tutoriel en cinq étapes débouche sur un tour du petit ovale. Les statistiques par pseudo et mode sont stockées dans le navigateur. Forfait retire la voiture des collisions et passe la main aux pilotes encore engagés.
 
 23 circuits sélectionnables en solo, contre l’IA, sur un même écran et en salle. Le créateur choisit le tracé en ligne. Le petit ovale reste accessible depuis le tutoriel.
+
+## Atelier de circuits
+
+Depuis le menu, choisir Créer un circuit. Dessiner en maintenant la souris ou le doigt, revenir au départ ou utiliser Fermer la boucle. Déplacer les points en mode Retoucher et régler leur arrondi individuellement. La largeur de 3 à 6 cases s’applique à toute la piste. La ligne de départ est placée automatiquement. Les circuits enregistrés sur ce navigateur figurent dans Mes circuits du sélecteur. En ligne, la salle reçoit une copie du circuit de son hôte.

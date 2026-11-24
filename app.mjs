@@ -676,7 +676,7 @@ entry.addEventListener('submit',event => {
   if (joining && !/^[A-Z2-9]{6}$/.test(code)) { notice('Entre le code à 6 caractères.'); return; }
   busy(async () => {
     const key = joining ? localStorage.getItem('cq-token-'+code) : null;
-    const data = await request(joining ? '/'+code+'/join' : '',{name,course:trackPicker.value,lapGoal:Number(byId('lap-goal').value)},key);
+    const data = await request(joining ? '/'+code+'/join' : '',{name,course:trackPicker.value,design:RaceAtelier.list().find(d=>d.id===trackPicker.value),lapGoal:Number(byId('lap-goal').value)},key);
     localStorage.setItem('cq-name',name);
     remember(data);
   });
