@@ -299,6 +299,7 @@ function draw(active, choices) {
     }
   });
   drivers.forEach((driver,index) => {
+    if(driver.forfeit)return;
     svg('circle',{cx:driver.x,cy:driver.y,r:driver===active ? .37 : .29,
       fill:colors[index],stroke:'#102029','stroke-width':.09});
   });
@@ -559,6 +560,8 @@ function layoutRaceControls(racing) {
 }
 
 function render() {
+  byId('forfeit').hidden=room?.state!=='racing'||room.players[room.you]?.forfeit;
+  if(room)recordRace(room,'En direct',[room.you]);
   entry.hidden = Boolean(room);
   game.hidden = !room;
   const racing = room?.state === 'racing';
@@ -593,7 +596,7 @@ function render() {
     const marker = document.createElement('i');
     marker.style.backgroundColor = colors[index];
     const name = document.createElement('span');
-    name.textContent = player.name;
+    name.textContent = player.name+(player.forfeit?' · Forfait':'');
     const speed = document.createElement('span');
     speed.textContent = room.state === 'lobby' ? (index === 0 ? 'Hôte' : 'Prêt') :
       'Vitesse '+(player.recovery ? 1 : Math.max(Math.abs(player.vx),Math.abs(player.vy)));
@@ -639,8 +642,8 @@ function render() {
     const names = room.winners.map(index => room.players[index].name).join(' et ');
     status.textContent = room.winners.length > 1 ? 'Égalité · '+names : names+' remporte la course';
     const distance = room.players[room.winners[0]].finish;
-    hint.textContent = `Manche ${room.round} · ${distance} ${distance === 1 ? 'case' : 'cases'} après la ligne.`;
-    if (room.you === 0) showButton('Rejouer','restart');
+    hint.textContent = room.byForfeit?'Victoire par forfait.':`Manche ${room.round} · ${distance} ${distance === 1 ? 'case' : 'cases'} après la ligne.`;
+    if (!room.players.some(p=>p.forfeit) && room.you === 0) showButton('Rejouer','restart');
   } else {
     status.textContent = 'Au tour de '+active.name;
     const canMove = choices.some(choice => !choice.blocked);
@@ -702,7 +705,14 @@ byId('invite').addEventListener('click',async () => {
     notice('Lien d’invitation · '+url.href);
   }
 });
-byId('leave').addEventListener('click',() => {
+async function exitRoom(event){
+  event?.preventDefault();
+  if(!room){location.href='/';return;}
+  if(pending)return;
+  if(room.state==='racing' && !confirm('Quitter cette course et déclarer forfait ?'))return;
+  if(room.state==='racing'||room.state==='lobby'){
+    pending=true;try{const data=await request('/'+room.code+'/leave',{revision:room.revision});if(room.state==='racing')recordRace(data.room,'En direct',[room.you]);}catch(error){notice(error.message);return;}finally{pending=false;}
+  }
   if (pending) return;
   stopReplay();
   roomInput.value = room.code;
@@ -714,8 +724,10 @@ byId('leave').addEventListener('click',() => {
   localStorage.removeItem('cq-last');
   history.replaceState(null,'',location.pathname);
   notice();
-  render();
-});
+  location.href='/';
+}
+for(const id of ['leave','forfeit','home'])byId(id).onclick=exitRoom;
+document.querySelector('.mast a').onclick=exitRoom;
 
 render();
 const resumeCode = inviteCode || localStorage.getItem('cq-last');

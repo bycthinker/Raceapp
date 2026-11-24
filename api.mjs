@@ -1,4 +1,4 @@
-import { racer, play, spaCourse, advanceTurn } from './game.mjs';
+import { racer, play, spaCourse, advanceTurn, forfeitRace } from './game.mjs';
 
 class GameError extends Error {
   constructor(message, status = 400) {
@@ -26,7 +26,7 @@ function view(room, token) {
 export async function api(request, store) {
   try {
     const path = new URL(request.url).pathname;
-    const match = /^\/api\/rooms(?:\/([A-Z2-9]{6})(?:\/(join|start|move|restart))?)?$/.exec(path);
+    const match = /^\/api\/rooms(?:\/([A-Z2-9]{6})(?:\/(join|start|move|restart|leave))?)?$/.exec(path);
     if (!match) throw new GameError('Adresse inconnue.',404);
     const [,code,action] = match;
     const token = request.headers.get('Authorization')?.replace(/^Bearer /,'');
@@ -48,8 +48,9 @@ export async function api(request, store) {
       const missed = 1 + Math.floor((Date.now()-room.deadline)/15000);
       advanceTurn(room);
       if(room.state === 'racing'){
-        room.round += Math.floor((room.turn + missed-1)/room.players.length);
-        room.turn = (room.turn + missed-1)%room.players.length;
+        const active=room.players.flatMap((p,i)=>p.forfeit?[]:[i]);
+        const pos=active.indexOf(room.turn)+missed-1;
+        room.round+=Math.floor(pos/active.length);room.turn=active[pos%active.length];
       }
       room.deadline += missed*15000;
       room.revision++;
@@ -72,21 +73,29 @@ export async function api(request, store) {
       if (you < 0) throw new GameError('Rejoins la salle pour jouer.',403);
       const body = await request.json();
       if (body.revision !== room.revision) throw new GameError('La salle a changé. Réessaie.',409);
-      if (action === 'start') {
+      const keepDeadline=action==='leave' && room.turn!==you;
+      if(action==='leave'){
+        if(room.state==='lobby'){
+          room.players.splice(you,1);
+          room.players=room.players.map((p,i)=>racer(p.name,p.token,i,spaCourse));
+          if(!room.players.length)room.state='closed';
+        }else if(room.state==='racing'){forfeitRace(room,you);}
+      }else if (action === 'start') {
         if (you !== 0 || room.state !== 'lobby' || room.players.length < 2) {
           throw new GameError('L’hôte peut lancer la course dès que deux joueurs sont prêts.',409);
         }
-        room.state = 'racing';
+        room.state = 'racing';room.raceId=crypto.randomUUID();
       } else if (action === 'restart') {
         if (you !== 0 || room.state !== 'finished') throw new GameError('L’hôte peut relancer une course terminée.',409);
-        room.players = room.players.map((driver,index) => racer(driver.name,driver.token,index,spaCourse));
-        Object.assign(room,{state:'racing',turn:0,round:1,winners:[],replay:[],lastLap:null});
+        room.players = room.players.filter(p=>!p.forfeit).map((driver,index) => racer(driver.name,driver.token,index,spaCourse));
+        if(room.players.length<2)throw new GameError('Crée une nouvelle salle pour la revanche.',409);
+        Object.assign(room,{raceId:crypto.randomUUID(),byForfeit:false,state:'racing',turn:0,round:1,winners:[],replay:[],lastLap:null});
       } else {
         if (room.state !== 'racing' || room.turn !== you) throw new GameError('Attends ton tour.',409);
         if (!play(room,body.x,body.y)) throw new GameError('Ce déplacement est interdit.',409);
       }
+      if(room.state === 'racing' && !keepDeadline) room.deadline=Date.now()+15000;
     }
-    if(room.state === 'racing') room.deadline=Date.now()+15000;
     room.revision += 1;
     if (!await store.update(room)) throw new GameError('La salle a changé. Réessaie.',409);
     return json({room:view(room,newToken), ...(action === 'join' ? {token:newToken} : {})});

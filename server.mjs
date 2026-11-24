@@ -16,6 +16,10 @@ const store = {
 };
 const files = new Map([
   ['/',['index.html','text/html; charset=utf-8']],
+  ['/tutorial',['tutorial.html','text/html; charset=utf-8']],
+  ['/stats',['stats.html','text/html; charset=utf-8']],
+  ['/guide.css',['guide.css','text/css']],
+  ['/stats.js',['stats.js','text/javascript']],
   ['/online',['online.html','text/html; charset=utf-8']],
   ['/local.html',['local.html','text/html; charset=utf-8']],
   ['/app.mjs',['app.mjs','text/javascript; charset=utf-8']],

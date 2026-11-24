@@ -192,7 +192,7 @@ function options(room) {
     const speed = speedOf(vx,vy);
     const x = player.x+vx, y = player.y+vy;
     if (speed < 1 || speed > 6) return [];
-    const blocked = room.players.some(other => other !== player &&
+    const blocked = room.players.some(other => !other.forfeit && other !== player &&
       onSegment(other.x,other.y,player.x,player.y,x,y));
     return [{ x,y,vx,vy,speed,blocked, center:!dx&&!dy,
       offTrack: recovering ? !inside(x,y,course) : !staysInside(player.x,player.y,x,y,course) }];
@@ -273,21 +273,34 @@ function play(room, x, y) {
   return true;
 }
 
-function advanceTurn(room) {
-  room.turn += 1;
-  if (room.turn === room.players.length) {
-    room.turn = 0;
-    const best = Math.max(...room.players.map(driver => driver.finish ?? -1));
-    if (best >= 0) {
-      room.state = 'finished';
-      room.winners = room.players.flatMap((driver,index) => driver.finish === best ? [index] : []);
-    } else {
-      room.round += 1;
-    }
-  }
+function forfeitRace(room,index){
+  const driver=room.players[index];
+  if(room.state!=='racing'||!driver||driver.forfeit)return false;
+  driver.forfeit=true;
+  driver.finish=null;
+  const remaining=room.players.flatMap((p,i)=>p.forfeit?[]:[i]);
+  if(remaining.length<=1){
+    room.state='finished'; room.winners=remaining; room.byForfeit=true;
+  }else if(room.turn===index) advanceTurn(room);
   return true;
+}
+function advanceTurn(room){
+  do{
+    room.turn++;
+    if(room.turn===room.players.length){
+      room.turn=0;
+      const best=Math.max(...room.players.map(p=>p.forfeit?-1:p.finish??-1));
+      if(best>=0){
+        room.state='finished';
+        room.winners=room.players.flatMap((p,i)=>!p.forfeit&&p.finish===best?[i]:[]);
+        return;
+      }
+      room.round++;
+    }
+  }while(room.players[room.turn].forfeit);
 }
 
 
 
-export {spaCourse, courseFor, racer, play, advanceTurn, options, inside, standings, colors};
+
+export {forfeitRace,spaCourse, courseFor, racer, play, advanceTurn, options, inside, standings, colors};

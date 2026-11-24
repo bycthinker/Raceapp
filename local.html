@@ -116,9 +116,38 @@ select{font:inherit;min-height:42px;border:1px solid var(--edge);border-radius:1
 .panel form p{font-size:.9rem}
 .shell .circuit svg[data-overview="true"]{height:auto;min-height:0;max-height:none;aspect-ratio:63.2/55.2}
 .shell #replay-board{aspect-ratio:63.2/55.2}
-</style></head>
+</style><style>.race-nav{display:flex;align-items:center;gap:14px;max-width:1100px;margin:auto;padding:6px 16px}.race-nav a{color:#bde4cc}.race-nav button{width:auto;min-height:36px;padding:5px 12px}</style><script>// Une entrée par course et par siège. Actualiser l'écran conserve le même résultat.
+function recordRace(room, label, indexes){
+  if(!room || room.state==='lobby' || !room.raceId || label==='Tutoriel')return;
+  for(const i of indexes){
+    const p=room.players[i]; if(!p)continue;
+    const key='raceapp:result:'+room.raceId+':'+i;
+    const result=p.forfeit?'Forfait':room.state!=='finished'?'En cours':
+      !room.winners.includes(i)?'Perdue':room.winners.length>1?'Égalité':'Gagnée';
+    const value=JSON.stringify({name:p.name,mode:label,result});
+    try{if(localStorage.getItem(key)!==value)localStorage.setItem(key,value);}catch{}
+  }
+}
+function renderStats(){
+  const body=document.querySelector('#stats-body');if(!body)return;
+  const rows=new Map();
+  for(const key of Object.keys(localStorage)){
+    if(!key.startsWith('raceapp:result:'))continue;
+    let s;try{s=JSON.parse(localStorage.getItem(key));}catch{continue;}
+    const id=JSON.stringify([s.name,s.mode]);
+    const row=rows.get(id)??[s.name,s.mode,0,0,0,0];
+    row[2]++;if(s.result==='Gagnée')row[3]++;if(s.result==='Égalité')row[4]++;if(s.result==='Forfait')row[5]++;
+    rows.set(id,row);
+  }
+  for(const row of rows.values()){
+    const tr=body.insertRow();for(const value of row)tr.insertCell().textContent=value;
+  }
+  document.querySelector('#empty').hidden=rows.size>0;
+}
+document.addEventListener('DOMContentLoaded',renderStats);
+</script></head>
 <body>
-  <main class="shell">
+  <nav class="race-nav" aria-label="Navigation"><a href="/" id="home">Menu principal</a><button id="forfeit" type="button" hidden>Déclarer forfait</button></nav><main class="shell">
     <header class="mast">
       
       <div><h1><a style="color:inherit;text-decoration:none" href="/" aria-label="Raceapp · Accueil">Raceapp</a></h1><p>Démo locale · 2 à 4 joueurs</p></div>
@@ -269,7 +298,25 @@ const spaCourse={
   ],
   kerbs:[[[12,26],[68,85],[111,123],[167,180]],[[23,35],[82,95],[133,145],[235,248]]],
 };
-const courseFor = room => ({paper:paperCourse,spa:spaCourse})[room?.course] ?? straightCourse;
+function ovalBoundary(radius) {
+  return [11,23].flatMap((center,index) => Array.from({length:13},(_,step) => {
+    const angle = (90+180*index+step*15)*Math.PI/180;
+    return [center+radius*Math.cos(angle),11+radius*Math.sin(angle)];
+  }));
+}
+const ovalLine = {axis:'x',at:17,min:15,max:20,direction:-1};
+const ovalCourse = {
+  width:34,height:22,boundaries:[ovalBoundary(9),ovalBoundary(4)],
+  start:ovalLine,finish:ovalLine,grid:[[17,16],[17,17],[17,18],[17,19]],
+  checkpoints:[
+    {axis:'y',at:11,min:2,max:7,direction:-1},
+    {axis:'x',at:17,min:2,max:7,direction:1},
+    {axis:'y',at:11,min:27,max:32,direction:1},
+  ],
+  kerbs:[[[1,12],[13,24]],[[1,12],[13,24]]],
+};
+
+const courseFor = room => ({paper:paperCourse,spa:spaCourse,oval:ovalCourse})[room?.course] ?? straightCourse;
 const paperSectors = [
   [[32,38],[15,38],[7,37],[5,32],[5,23]],
   [[5,23],[5,8],[7,5],[20,5],[52,5]],
@@ -381,7 +428,7 @@ function options(room) {
     const speed = speedOf(vx,vy);
     const x = player.x+vx, y = player.y+vy;
     if (speed < 1 || speed > 6) return [];
-    const blocked = room.players.some(other => other !== player &&
+    const blocked = room.players.some(other => !other.forfeit && other !== player &&
       onSegment(other.x,other.y,player.x,player.y,x,y));
     return [{ x,y,vx,vy,speed,blocked, center:!dx&&!dy,
       offTrack: recovering ? !inside(x,y,course) : !staysInside(player.x,player.y,x,y,course) }];
@@ -458,19 +505,38 @@ function play(room, x, y) {
     player.trail.push([move.x,move.y]);
     (room.replay ??= []).push(room.turn);
   }
-  room.turn += 1;
-  if (room.turn === room.players.length) {
-    room.turn = 0;
-    const best = Math.max(...room.players.map(driver => driver.finish ?? -1));
-    if (best >= 0) {
-      room.state = 'finished';
-      room.winners = room.players.flatMap((driver,index) => driver.finish === best ? [index] : []);
-    } else {
-      room.round += 1;
-    }
-  }
+  advanceTurn(room);
   return true;
 }
+
+function forfeitRace(room,index){
+  const driver=room.players[index];
+  if(room.state!=='racing'||!driver||driver.forfeit)return false;
+  driver.forfeit=true;
+  driver.finish=null;
+  const remaining=room.players.flatMap((p,i)=>p.forfeit?[]:[i]);
+  if(remaining.length<=1){
+    room.state='finished'; room.winners=remaining; room.byForfeit=true;
+  }else if(room.turn===index) advanceTurn(room);
+  return true;
+}
+function advanceTurn(room){
+  do{
+    room.turn++;
+    if(room.turn===room.players.length){
+      room.turn=0;
+      const best=Math.max(...room.players.map(p=>p.forfeit?-1:p.finish??-1));
+      if(best>=0){
+        room.state='finished';
+        room.winners=room.players.flatMap((p,i)=>!p.forfeit&&p.finish===best?[i]:[]);
+        return;
+      }
+      room.round++;
+    }
+  }while(room.players[room.turn].forfeit);
+}
+
+
 
 
 const byId = id => document.getElementById(id);
@@ -487,7 +553,8 @@ let primaryAction = null;
 const names = ['Brice','Papa','Joueur 3','Joueur 4'];
 
 const mode = new URLSearchParams(location.search).get('mode');
-const solo = mode==='solo', ai = mode==='ia';
+const tutorial=mode==='tuto';
+const solo = tutorial||mode==='solo', ai = mode==='ia';
 if(solo || ai){
   count.replaceChildren(new Option(solo?'1':'2',solo?'1':'2'));
   count.hidden=true;
@@ -497,19 +564,74 @@ if(solo || ai){
   entry.querySelector('p').textContent=solo?'Termine la course en un minimum de manches.':'Le pilote automatique joue après toi.';
   if(ai) names[1]='Raceapp IA';
 }
-let aiTarget=1;
-function pickAiMove(state){
-  const driver=state.players[state.turn];
-  // Suivre les sommets du tracé dans l’ordre, même là où deux virages se rapprochent.
-  for(let i=0;i<spaNodes.length;i++){
-    const [x,y]=spaNodes[aiTarget];
-    if(Math.hypot(driver.x-x,driver.y-y)>2) break;
-    aiTarget=(aiTarget+1)%spaNodes.length;
+const road = spaNodes.map(([x,y],i) => {
+  const [nx,ny]=spaNodes[(i+1)%spaNodes.length];
+  return {x,y,dx:nx-x,dy:ny-y,len:Math.hypot(nx-x,ny-y)};
+});
+let roadLength=0;
+for(const segment of road){segment.start=roadLength;roadLength+=segment.len;}
+function roadPosition(x,y,previous){
+  let best=null;
+  for(const s of road){
+    const t=Math.max(0,Math.min(1,((x-s.x)*s.dx+(y-s.y)*s.dy)/(s.len*s.len)));
+    const raw=s.start+t*s.len;
+    const position=raw+Math.round((previous-raw)/roadLength)*roadLength;
+    if(Math.abs(position-previous)>13) continue;
+    const error=Math.hypot(x-s.x-t*s.dx,y-s.y-t*s.dy);
+    if(!best || error<best.error) best={position,error};
   }
-  const [x,y]=spaNodes[aiTarget];
-  const score=m=>Math.hypot(m.x-x,m.y-y)+(m.offTrack?30:0)+Math.max(0,m.speed-2)*5;
-  return options(state).filter(m=>!m.blocked).sort((a,b)=>score(a)-score(b))[0];
+  return best;
 }
+let aiProgress=0;
+const safeSegments=new Map();
+function safeSegment(p,m){
+  const key=[p.x,p.y,m.x,m.y].join(',');
+  if(!safeSegments.has(key))safeSegments.set(key,staysInside(p.x,p.y,m.x,m.y,spaCourse));
+  return safeSegments.get(key);
+}
+function canBrake(m){
+  let {x,y,vx,vy}=m;
+  while(Math.max(Math.abs(vx),Math.abs(vy))>1){
+    vx-=Math.sign(vx);vy-=Math.sign(vy);
+    if(!safeSegment({x,y},{x:x+vx,y:y+vy}))return false;
+    x+=vx;y+=vy;
+  }
+  return true;
+}
+function pickAiMove(state){
+  const p=state.players[state.turn];
+  const legal=options(state).filter(m=>!m.blocked);
+  aiProgress=roadPosition(p.x,p.y,aiProgress)?.position??aiProgress;
+  let beam=[{...p,position:aiProgress,score:0}], best;
+  for(let depth=0;depth<5;depth++){
+    const next=new Map();
+    for(const b of beam){
+      const moves=depth===0?legal:steps.map(([dx,dy])=>{
+        const vx=b.vx+dx,vy=b.vy+dy;
+        return {vx,vy,x:b.x+vx,y:b.y+vy,speed:speedOf(vx,vy)};
+      });
+      for(const m of moves){
+        if(m.speed<1 || m.speed>6 || m.offTrack || (depth && !safeSegment(b,m)))continue;
+        if(!canBrake(m))continue;
+        const loc=roadPosition(m.x,m.y,b.position);
+        if(!loc)continue;
+        const score=loc.position-.38*loc.error+.15*b.score;
+        const key=[m.x,m.y,m.vx,m.vy].join(',');
+        if(!next.has(key)||next.get(key).score<score)
+          next.set(key,{...m,position:loc.position,score,first:b.first??m});
+      }
+    }
+    beam=[...next.values()].sort((a,b)=>b.score-a.score).slice(0,12);
+    if(!beam.length)break;
+    best=beam[0].first;
+  }
+  const recoveryScore=m=>{
+    const loc=roadPosition(m.x,m.y,aiProgress);
+    return (m.offTrack?100:0)+(loc?.error??100)*3+m.speed-.1*(loc?.position??aiProgress);
+  };
+  return best??legal.sort((a,b)=>recoveryScore(a)-recoveryScore(b))[0];
+}
+
 function refreshNames() {
   const fields = byId('names');
   for (const field of fields.querySelectorAll('input')) names[Number(field.dataset.index)] = field.value;
@@ -529,12 +651,12 @@ function refreshNames() {
 }
 
 function startRace() {
-  aiTarget=1;
+  aiProgress=0;
   stopReplay();
   const players = Array.from(byId('names').querySelectorAll('input'),(field,index) =>
-    racer(field.value.trim() || 'Joueur '+(index+1),null,index,spaCourse));
+    racer(field.value.trim() || 'Joueur '+(index+1),null,index,tutorial?ovalCourse:spaCourse));
   const lapGoal = byId('lap-goal').value === '2' ? 2 : 1;
-  room = { course:'spa',lapGoal,players,turn:0,you:0,round:1,state:'racing',winners:[],
+  room = {raceId:crypto.randomUUID(),course:tutorial?'oval':'spa',lapGoal:tutorial?1:lapGoal,players,turn:0,you:0,round:1,state:'racing',winners:[],
     doubleConfirm:byId('double-confirm').checked };
   selected = null;
   camera = null;
@@ -688,7 +810,7 @@ function drawSurface(course, target = board) {
 
 function draw(active, choices) {
   board.replaceChildren();
-  const course = spaCourse;
+  const course = tutorial?ovalCourse:spaCourse;
   const {width,height,start,finish,grid:startingPositions} = course;
   if (zoom && active) {
     const [zoomWidth,zoomHeight] = zoomSizes[zoom];
@@ -739,6 +861,7 @@ function draw(active, choices) {
     }
   });
   drivers.forEach((driver,index) => {
+    if(driver.forfeit)return;
     svg('circle',{cx:driver.x,cy:driver.y,r:driver===active ? .37 : .29,
       fill:colors[index],stroke:'#102029','stroke-width':.09});
   });
@@ -998,7 +1121,9 @@ function layoutRaceControls(racing) {
   }
 }
 
-function render() {
+function render(){
+  byId('forfeit').hidden=room?.state!=='racing'||solo;
+  if(room)recordRace(room,tutorial?'Tutoriel':ai?'Contre l’IA':solo?'Solo':'Même écran',ai?[0]:room.players.map((_,i)=>i));
   entry.hidden = Boolean(room);
   game.hidden = !room;
   const racing = room?.state === 'racing';
@@ -1031,7 +1156,7 @@ function render() {
     const marker = document.createElement('i');
     marker.style.backgroundColor = colors[index];
     const name = document.createElement('span');
-    name.textContent = player.name;
+    name.textContent = player.name+(player.forfeit?' · Forfait':'');
     const speed = document.createElement('span');
     speed.textContent = room.state === 'lobby' ? (index === 0 ? 'Hôte' : 'Prêt') :
       'Vitesse '+(player.recovery ? 1 : Math.max(Math.abs(player.vx),Math.abs(player.vy)));
@@ -1077,8 +1202,8 @@ function render() {
     const names = room.winners.map(index => room.players[index].name).join(' et ');
     status.textContent = solo ? 'Course terminée en '+room.round+' manches' : room.winners.length > 1 ? 'Égalité · '+names : names+' remporte la course';
     const distance = room.players[room.winners[0]].finish;
-    hint.textContent = `Manche ${room.round} · ${distance} ${distance === 1 ? 'case' : 'cases'} après la ligne.`;
-    if (room.you === 0) showButton('Rejouer','restart');
+    hint.textContent = room.byForfeit?'Victoire par forfait.':`Manche ${room.round} · ${distance} ${distance === 1 ? 'case' : 'cases'} après la ligne.`;
+    if (!room.players.some(p=>p.forfeit) && room.you === 0) showButton('Rejouer','restart');
   } else {
     status.textContent = 'Au tour de '+active.name;
     const canMove = choices.some(choice => !choice.blocked);
@@ -1136,16 +1261,22 @@ bindZoom();
 bindPan();
 bindMinimap();
 bindReplay();
-byId('leave').addEventListener('click',() => {
-  stopReplay();
-  room = null;
-  selected = null;
-  camera = null;
-  zoom = 0;
-  render();
-});
+byId('forfeit').onclick=()=>{
+  const i=ai?0:room.turn;
+  if(!confirm(room.players[i].name+' déclare forfait ?'))return;
+  forfeitRace(room,i);room.you=ai?0:room.turn;selected=null;camera=null;render();
+};
+function exitLocal(e){e.preventDefault();
+  if(room?.state==='racing'){
+    if(!confirm(solo?'Quitter cette course ?':'Quitter la partie sur cet écran et enregistrer le forfait ?'))return;
+    if(!solo){forfeitRace(room,ai?0:room.turn);render();}
+  }
+  location.href='/';
+}
+byId('home').onclick=exitLocal;document.querySelector('.mast a').onclick=exitLocal;
+byId('leave').onclick=exitLocal;
 refreshNames();
-render();
+if(tutorial){document.querySelector('.mast p').textContent='Tutoriel · Un tour';byId('circuit-title').textContent='Petit ovale';startRace();}else render();
 
 </script>
 </body>
