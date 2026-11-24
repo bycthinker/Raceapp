@@ -1,12 +1,12 @@
 # Raceapp · Course sur Quadrillage
 
-Jeu de course sur quadrillage pour 2 à 4 joueurs. La page principale permet de créer ou rejoindre une salle sur le circuit de Spa. Le lien « Jouer sur le même écran » ouvre la version locale.
+Jeu de course sur quadrillage pour 2 à 4 joueurs. Le menu Raceapp propose la course en direct, le solo et une course contre une IA locale sur Spa. En direct, créez ou rejoignez une salle. Le lien « Jouer sur le même écran » ouvre la version locale.
 
 ## Mettre les fichiers sur GitHub depuis Windows
 
 1. Extraire le ZIP dans un dossier.
 2. Ouvrir le dépôt Raceapp sur github.com. Dans l’onglet Code, choisir Add file → Upload files (ou uploading an existing file dans un dépôt vide).
-3. Glisser ensemble les huit fichiers extraits directement à la racine du dépôt. Vérifier que package.json et server.mjs apparaissent à la racine du dépôt.
+3. Glisser ensemble les neuf fichiers extraits directement à la racine du dépôt. Vérifier que package.json et server.mjs apparaissent à la racine du dépôt.
 4. Cliquer sur Commit changes sur la branche principale.
 
 ## Héberger le jeu sur Render
@@ -31,5 +31,6 @@ Avec Node.js 24, ouvrir un terminal dans le dossier qui contient package.json et
 - server.mjs sert le site et enregistre les salles dans SQLite.
 - api.mjs contrôle les invitations, les tours et les déplacements.
 - game.mjs est le moteur partagé par le serveur et le navigateur.
-- index.html et app.mjs affichent la course en ligne.
+- index.html affiche le menu. online.html et app.mjs affichent la course en ligne.
 - local.html contient le jeu autonome sur un seul écran.
+

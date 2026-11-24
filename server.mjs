@@ -16,6 +16,7 @@ const store = {
 };
 const files = new Map([
   ['/',['index.html','text/html; charset=utf-8']],
+  ['/online',['online.html','text/html; charset=utf-8']],
   ['/local.html',['local.html','text/html; charset=utf-8']],
   ['/app.mjs',['app.mjs','text/javascript; charset=utf-8']],
   ['/game.mjs',['game.mjs','text/javascript; charset=utf-8']],
@@ -43,7 +44,7 @@ createServer(async (incoming,outgoing) => {
       }
       response = await api(new Request(url,init),store);
     } else if (files.has(url.pathname)) {
-      const [name,type] = files.get(url.pathname);
+      const [name,type] = files.get(url.pathname==='/' && url.searchParams.has('salle') ? '/online' : url.pathname);
       const content = await readFile(new URL('./'+name,import.meta.url));
       response = new Response(content,{headers:{'Content-Type':type}});
     } else {
