@@ -1,0 +1,7 @@
+{
+  "name": "course-quadrillage",
+  "private": true,
+  "type": "module",
+  "engines": { "node": "24.x" },
+  "scripts": { "start": "node server.mjs" }
+}
