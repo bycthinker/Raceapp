@@ -70,3 +70,12 @@ a.card:active { transform: translateY(1px); }
 }
 @media (max-width:360px) { .tagline { display: none; } }
 @media (prefers-reduced-motion: reduce) { a.card { transition: none; } }
+/* Le calque du menu reste au-dessus du fond opaque sur Safari et sous les boutons. */
+body.menu-scene::before { z-index:0; --grid-color:rgb(184 218 181 / .19); animation-duration:10s; }
+.menu-scene .page { position:relative; z-index:1; }
+.brandbar .pilot-link { margin-left:auto; max-width:46%; overflow-wrap:anywhere; }
+.brandbar #version { margin-left:0; }
+@media (max-width:710px) { .brandbar .tagline { display:none; } }
+
+#grid-motion { margin-top:18px; min-height:44px; padding:8px 14px; background:#203029; color:var(--text); border:1px solid var(--edge); border-radius:8px; cursor:pointer; }
+body.menu-scene.animate-grid::before { animation:move-grid 10s linear infinite; }

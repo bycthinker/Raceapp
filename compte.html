@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compte pilote · Raceapp</title><link rel="stylesheet" href="guide.css"><link rel="stylesheet" href="ui.css">
+<script src="profile.js"></script><script defer src="compte.js"></script></head>
+<body class="grid-scene"><main class="profile-page">
+<a class="return-link" id="return" href="index.html">← Retour</a>
+<h1>Compte pilote</h1>
+<p id="session" role="status"></p>
+<section id="access" hidden>
+<div class="account-tabs" role="group" aria-label="Accès au compte"><button type="button" id="login" aria-pressed="true">Se connecter</button><button type="button" id="register" aria-pressed="false">Créer un compte</button></div>
+<form id="auth">
+<label for="handle">Pseudo</label><input id="handle" autocomplete="username" minlength="2" maxlength="24" required>
+<label for="password">Mot de passe</label><input id="password" type="password" autocomplete="current-password" maxlength="128" required>
+<p class="form-help" id="password-help" hidden>Choisis un mot de passe d’au moins 10 caractères.</p>
+<button id="submit" type="submit">Se connecter</button>
+</form></section>
+<a id="my-history" href="stats.html" hidden>Mon historique de course →</a>
+<p id="feedback" role="status"></p>
+<button id="guest" type="button" class="secondary">Continuer en invité</button>
+<p class="form-help">En invité, tu peux rejoindre un salon avec son code ou jouer sur cet appareil. Un compte te permet aussi de créer un salon et de retrouver tes courses sur un autre appareil.</p>
+</main></body></html>

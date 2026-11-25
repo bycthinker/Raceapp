@@ -42,7 +42,7 @@ function redraw(){
   if(pts.length&&!closed)svg('circle',{cx:pts[0][0],cy:pts[0][1],r:.65,fill:'#f5ad48'});
   $('pen').setAttribute('aria-pressed',mode==='pen');$('edit').setAttribute('aria-pressed',mode==='edit');
   $('undo').disabled=!history.length;$('close').disabled=closed||draft.points.length<3;
-  $('edit').disabled=!closed;$('pen').disabled=closed;$('save').disabled=$('test').disabled=!closed;
+  $('edit').disabled=!closed;$('pen').disabled=closed;$('save').disabled=$('test').disabled=$('export').disabled=!closed;
   $('round').disabled=!closed||selected<0;$('round').value=selected<0?65:Math.round(draft.points[selected][2]*100);
   $('roundVal').textContent=selected<0?'—':$('round').value+' %';
   $('finish').disabled=$('reverse').disabled=!closed;
@@ -126,11 +126,42 @@ for(const [id,apply] of [['width',v=>{
   let changing=false;$(id).oninput=()=>{if(!changing){mark();changing=true}apply(Number($(id).value));redraw()};$(id).onchange=()=>changing=false;
 }
 $('name').oninput=()=>{draft.name=$('name').value;dirty=true};
-function shelf(){const list=lib.list();$('shelf').replaceChildren(...list.map(d=>new Option(d.name,d.id)));$('load').disabled=!list.length}
-function storeDraft(){try{lib.build(draft);lib.save(draft);dirty=false;shelf();$('shelf').value=draft.id;hint('Circuit enregistré sur cet appareil.');return true}catch(e){hint(e.message);return false}}
-$('save').onclick=storeDraft;$('test').onclick=()=>{if(storeDraft())location.href='local.html?mode=solo&from=atelier&circuit='+encodeURIComponent(draft.id)+(location.protocol==='file:'?'#dessin='+encodeURIComponent(JSON.stringify(draft)):'')};
-function openDraft(d){if(dirty&&!confirm('Abandonner les modifications non enregistrées ?'))return;draft=d;history=[];selected=segment=-1;dirty=false;mode=d.closed?'edit':'pen';$('name').value=d.name;redraw();hint(d.closed?'Sélectionne un virage à retoucher.':'Maintiens le clic et dessine. Reviens au point de départ pour fermer le circuit.')}
-$('load').onclick=()=>{const d=lib.list().find(v=>v.id===$('shelf').value);if(d)openDraft(d)};
+function shelf(){const list=lib.list();$('shelf').replaceChildren(...list.map(d=>new Option(d.name+' · jusqu’au '+new Date(d.expiresAt).toLocaleDateString('fr-BE'),d.id)));$('load').disabled=!list.length}
+function storeDraft(){try{lib.build(draft);lib.save(draft);dirty=false;shelf();$('shelf').value=draft.id;hint('Circuit enregistré pour 7 jours sur cet appareil.');return true}catch(e){hint(e.message);return false}}
+$('save').onclick=storeDraft;
+$('test').onclick=()=>{
+  let saved=lib.list().find(d=>d.id===draft.id);
+  if(!saved || dirty){
+    if(!storeDraft())return;
+    saved=lib.list().find(d=>d.id===draft.id);
+  }
+  const url=new URL('local.html',location.href);
+  url.search=new URLSearchParams({mode:'solo',from:'atelier',circuit:draft.id});
+  if(location.protocol==='file:')url.hash='dessin='+encodeURIComponent(JSON.stringify(saved));
+  location.href=url.href;
+};
+function openDraft(d){if(dirty&&!confirm('Abandonner les modifications non enregistrées ?'))return false;draft=d;history=[];selected=segment=-1;dirty=false;mode=d.closed?'edit':'pen';$('name').value=d.name;redraw();hint(d.closed?'Sélectionne un virage à retoucher.':'Maintiens le clic et dessine. Reviens au point de départ pour fermer le circuit.');return true}
+$('export').onclick=()=>{
+  try {
+    const file=lib.toFile(draft);
+    const blob=new Blob([JSON.stringify(file,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download=(draft.name.trim().replace(/[^a-z0-9à-ÿ_-]+/gi,'-') || 'circuit')+'.json';
+    document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+    hint('Circuit exporté. Tu peux conserver ce fichier sans limite de durée.');
+  } catch(error){hint(error.message);}
+};
+$('import').onchange=async event=>{
+  const input=event.target,file=input.files[0];
+  try {
+    if(!file)return;
+    if(file.size>65536)throw new Error('Le fichier dépasse 64 Ko.');
+    const d=lib.fromFile(JSON.parse(await file.text()));
+    if(openDraft(d)){dirty=true;hint('Circuit ouvert. Enregistre-le pour le retrouver sur cet appareil.');}
+  } catch(error){hint('Import impossible. '+error.message);}
+  finally{input.value='';}
+};
+$('load').onclick=()=>{const d=lib.list().find(v=>v.id===$('shelf').value);if(d)openDraft(d);else{shelf();hint('Ce circuit personnel a expiré. Tu peux rouvrir sa copie JSON.')}};
 $('fresh').onclick=()=>openDraft(fresh());
 $('pen').onclick=()=>hint('Maintiens le clic pour tracer la piste.');$('edit').onclick=()=>{mode='edit';redraw();hint('Clique sur un point pour modifier un virage ou entre deux points pour régler la largeur du segment.')};
 $('finish').onclick=()=>{mode='finish';selected=segment=-1;redraw();hint('Clique sur le tracé à l’endroit où placer la ligne de départ et d’arrivée.')};

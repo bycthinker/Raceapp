@@ -142,6 +142,7 @@ function fillCoursePicker(picker){
   if(group.children.length)picker.append(group);
   const requested=new URLSearchParams(location.search).get('circuit');
   picker.value=requested && Object.hasOwn(seasonCourses,requested)?requested:'r10';
+  void RaceAtelier.addOfficial(picker,seasonCourses);
 }
 const customCache=new Map();
 function customCourse(d){

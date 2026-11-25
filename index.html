@@ -7,8 +7,9 @@
   <title>Raceapp · Menu principal</title>
   <link rel="stylesheet" href="home.css">
   <link rel="stylesheet" href="ui.css">
+  <script src="profile.js"></script><script defer src="stats.js"></script>
 </head>
-<body class="grid-scene">
+<body class="grid-scene menu-scene">
   <svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <symbol id="arrow" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></symbol>
     <symbol id="timer" viewBox="0 0 24 24"><circle cx="12" cy="14" r="8"/><path d="M9 2h6m-3 0v4m6 1 2-2m-8 9 3-4"/></symbol>
@@ -23,7 +24,8 @@
     <header class="brandbar">
       <div class="brand"><span class="flag" aria-hidden="true"></span>Raceapp</div>
       <span class="tagline">Course sur quadrillage</span>
-      <data id="version" value="0.1.0">v0.1</data>
+      <a class="pilot-link" data-profile href="compte.html">Compte pilote</a>
+      <data id="version" value="0.2.0">v0.2</data>
     </header>
     <main>
       <h1 id="play-title">Jouer</h1>
@@ -58,7 +60,18 @@
         <a class="card" href="tutorial.html"><svg class="icon" aria-hidden="true"><use href="#book"/></svg><strong>Tutoriel de pilotage</strong><svg class="icon arrow" aria-hidden="true"><use href="#arrow"/></svg></a>
         <a class="card" href="stats.html"><svg class="icon" aria-hidden="true"><use href="#chart"/></svg><strong>Mes statistiques</strong><svg class="icon arrow" aria-hidden="true"><use href="#arrow"/></svg></a>
       </nav>
+      <button type="button" id="grid-motion" hidden>Animer le quadrillage</button>
     </main>
   </div>
+<script>
+  const motion = document.getElementById('grid-motion');
+  const preference = matchMedia('(prefers-reduced-motion: reduce)');
+  function showMotionChoice(){motion.hidden=!preference.matches;}
+  motion.onclick=()=>{
+    const animated=document.body.classList.toggle('animate-grid');
+    motion.textContent=animated?'Arrêter le quadrillage':'Animer le quadrillage';
+  };
+  showMotionChoice();preference.addEventListener('change',showMotionChoice);
+</script>
 </body>
 </html>

@@ -1,0 +1,648 @@
+<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Créateur de circuits · Raceapp</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#12211d;color:#172922;font:16px/1.45 "DM Sans",system-ui,sans-serif}main{max-width:1480px;margin:auto;padding:14px clamp(12px,3vw,48px) 32px}header{display:flex;gap:14px;align-items:center;color:#f3f4e8;padding:8px 0 16px}header a{color:#cfebac;text-decoration:none}h1{font-size:clamp(26px,4vw,48px);letter-spacing:-.065em;margin:0}article{display:grid;grid-template-columns:minmax(0,1fr) 260px;background:#f6f5e9;border-radius:16px;overflow:hidden}section{min-width:0}aside{padding:20px;border-left:1px solid #c3caba;display:flex;flex-direction:column;gap:11px}label{display:block;font-weight:650}button,select,input{font:inherit}button,select,input[type=text]{background:#fffef5;border:1px solid #aab8aa;border-radius:8px;padding:8px 12px;color:inherit;min-height:42px}button{cursor:pointer}button:disabled{opacity:.45;cursor:default}button[aria-pressed=true],.primary{background:#205143;color:#fff;border-color:#205143}.tools{display:flex;flex-wrap:wrap;gap:7px;padding:10px}.sheet{background:#f4f3dd;width:100%;display:block;touch-action:none;cursor:crosshair;user-select:none}#hint{min-height:44px;padding:8px 14px;margin:0;border-top:1px solid #c3caba;color:#344a40}input[type=range]{width:100%;accent-color:#245745}output{float:right;font-variant-numeric:tabular-nums}hr{border:0;border-top:1px solid #cad1bf;width:100%}select,input[type=text]{width:100%}#test{background:#cced87}.start{pointer-events:none}@media(max-width:760px){article{display:block}aside{border:0;border-top:1px solid #c3caba;display:grid;grid-template-columns:1fr 1fr;padding:12px}aside label,aside hr,#shelf{grid-column:1/-1}.tools button{font-size:14px;padding:6px 9px}header{padding-top:0}}
+aside .studio-download{color:#1d4d3b;grid-column:1/-1}#sheet *{pointer-events:none}aside small,aside .file-field,aside .files-title{grid-column:1/-1}aside .file-field{font-size:.9rem}aside .file-field input{display:block;margin-top:5px;max-width:100%}aside .files-title{font-weight:750;margin:0}</style><style>/* Le décor bouge indépendamment de la piste et des zones tactiles. */
+body.grid-scene {
+  --grid-color: rgb(166 200 177 / .10);
+  isolation: isolate;
+  background-color: #101b18;
+}
+.grid-scene::before {
+  content: "";
+  position: fixed;
+  inset: -32px 0 0 -32px;
+  z-index: -1;
+  pointer-events: none;
+  background-image: linear-gradient(90deg, var(--grid-color) 1px, transparent 1px),
+                    linear-gradient(var(--grid-color) 1px, transparent 1px);
+  background-size: 32px 32px;
+  animation: move-grid 18s linear infinite;
+}
+@keyframes move-grid {
+  to { transform: translate(32px, 32px); }
+}
+button.back-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .65rem;
+  min-height: 44px;
+  padding: 8px 16px;
+  flex: none;
+  border: 1px solid #678075;
+  border-radius: 100px;
+  background: #203029;
+  color: #f2f5ea;
+  font: 650 15px/1.2 system-ui, sans-serif;
+  cursor: pointer;
+}
+.back-button::before {
+  content: "";
+  width: 14px;
+  height: 12px;
+  background: currentColor;
+  clip-path: polygon(0 50%, 45% 0, 54% 14%, 29% 42%, 100% 42%, 100% 58%, 29% 58%, 54% 86%, 45% 100%);
+}
+button.back-button:hover { background: #304639; border-color: #beec89; }
+button.back-button:focus-visible { outline: 3px solid #d3f797; outline-offset: 3px; }
+button.back-button:active { transform: translateY(1px); }
+@media (prefers-reduced-motion: reduce) {
+  .grid-scene::before { animation: none; }
+}
+.profile-page { max-width:520px; margin:4vh auto; padding:20px; }
+.profile-page h1 { margin:20px 0 8px; }
+.profile-page #auth { display:grid; gap:7px; margin:18px 0; }
+.profile-page input { box-sizing:border-box; min-height:44px; width:100%; padding:9px 12px; color:#f0f5e8; background:#15221c; border:1px solid #687e70; border-radius:9px; font:inherit; }
+.profile-page #submit { margin-top:8px; }
+.profile-page #feedback:empty { display:none; }
+.profile-page #feedback { color:#ffcf8a; }
+.profile-page .form-help { font-size:.9rem; color:#bccbbd; }
+.account-tabs { display:flex; flex-wrap:wrap; gap:6px; }
+.account-tabs button[aria-pressed=false],.profile-page .secondary { color:#d9e6d9; background:#293b30; }
+.return-link,.pilot-link { display:inline-flex; align-items:center; min-height:44px; padding:4px 14px; border:1px solid #617a68; border-radius:99px; color:#e7f1df; background:#24362a; text-decoration:none; font:650 14px/1.3 system-ui,sans-serif; }
+.pilot-link:focus-visible,.return-link:focus-visible { outline:3px solid #d1f895; outline-offset:2px; }
+</style><body class="grid-scene"><main><header><h1>Créateur de circuits</h1></header><article><section><div class="tools"><button id="pen" aria-pressed="true">Dessiner</button><button id="edit">Retoucher</button><button id="close">Fermer la boucle</button><button id="finish">Placer l’arrivée</button><button id="reverse">Inverser le sens</button><button id="resetView">Vue entière</button><button id="undo">Annuler</button></div>
+<svg style="aspect-ratio:3/2;-webkit-user-select:none" class="sheet" id="sheet" viewBox="0 0 96 64" aria-label="Feuille quadrillée pour dessiner ton circuit"><defs><pattern id="small" width="1" height="1" patternUnits="userSpaceOnUse"><path d="M1 0H0V1" fill="none" stroke="#95aba1" stroke-width=".055"/></pattern><pattern id="big" width="5" height="5" patternUnits="userSpaceOnUse"><rect width="5" height="5" fill="url(#small)"/><path d="M5 0H0V5" fill="none" stroke="#739789" stroke-width=".095"/></pattern></defs><rect width="96" height="64" fill="url(#big)"/><g id="drawing"></g></svg><p id="hint" role="status"></p></section><aside>
+<label>Nom du circuit<input id="name" type="text" maxlength="40" value="Mon circuit"></label>
+<label>Largeur de piste <small id="widthScope"></small> <output id="widthVal"></output><input id="width" type="range" min="3" max="6" step=".25" value="4"></label>
+<label>Arrondi du virage <output id="roundVal"></output><input id="round" type="range" min="0" max="100" value="65"></label>
+<button id="save" class="primary">Enregistrer</button><button hidden id="test">Essayer en solo</button><hr>
+<small>Les circuits personnels restent sur cet appareil pendant 7 jours après leur dernière sauvegarde.</small><label for="shelf">Mes circuits</label><select id="shelf"></select><button id="load">Ouvrir</button><button id="fresh">Nouveau tracé</button><hr><p class="files-title">Fichier de circuit</p><button type="button" id="export">Exporter en JSON</button><label class="file-field">Ouvrir un circuit JSON<input type="file" accept=".json,application/json" id="import"></label><small>Le fichier exporté peut être conservé et ajouté au catalogue du jeu.</small></aside></article></main>
+<script>// Moteur commun à l'éditeur, au navigateur de course et au serveur.
+globalThis.RaceAtelier=(()=>{
+  const key='raceapp:atelier:v1',dist=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
+  const mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t];
+  const area=r=>r.reduce((v,p,i)=>{const q=r[(i+1)%r.length];return v+p[0]*q[1]-p[1]*q[0]},0);
+  const fail=msg=>{throw new Error(msg)};
+  function shape(d){
+    if(!d||!Number.isFinite(d.width)||d.width<3||d.width>6||!Array.isArray(d.points)||d.points.length<3||d.points.length>180)fail('Trace une boucle avec au moins trois virages.');
+    for(const p of d.points)if(!Array.isArray(p)||p.length!==3||p.some(v=>!Number.isFinite(v))||p[0]<0||p[0]>96||p[1]<0||p[1]>64||p[2]<0||p[2]>1)fail('Point de tracé invalide.');
+    if(d.widths!==undefined && (!Array.isArray(d.widths)||d.widths.length!==d.points.length||d.widths.some(w=>!Number.isFinite(w)||w<3||w>6)))fail('La largeur de chaque segment doit être comprise entre 3 et 6 carreaux.');
+    const r=[],n=d.points.length;
+    for(let i=0;i<n;i++){
+      const p=d.points[i],a=d.points[(i+n-1)%n],b=d.points[(i+1)%n];
+      const da=dist(p,a),db=dist(p,b);
+      if(Math.min(da,db)<.15)fail('Écarte les deux points de réglage trop proches.');
+      const incoming=d.widths?.[(i+n-1)%n]??d.width;
+      const outgoing=d.widths?.[i]??d.width;
+      const t=Math.min(da,db)*.48*p[2];
+      if(t<.05){
+        if(incoming!==outgoing){
+          const transition=Math.min(1,da*.2,db*.2);
+          r.push([...mix(p,a,transition/da),incoming], [p[0],p[1],(incoming+outgoing)/2], [...mix(p,b,transition/db),outgoing]);
+        }else r.push([p[0],p[1],incoming]);
+        continue;
+      }
+      const u=mix(p,a,t/da),v=mix(p,b,t/db);
+      for(let j=0;j<=4;j++){const f=j/4;r.push([...mix(mix(u,p,f),mix(p,v,f),f),incoming+(outgoing-incoming)*f])}
+    }
+    return r;
+  }
+  function intersections(r,x){
+    const ys=[];
+    r.forEach((p,i)=>{const q=r[(i+1)%r.length];if((p[0]>x)!==(q[0]>x))ys.push(p[1]+(q[1]-p[1])*(x-p[0])/(q[0]-p[0]))});
+    return ys.sort((a,b)=>a-b);
+  }
+  function crossing(a,b,c,d){
+    const ux=b[0]-a[0],uy=b[1]-a[1],vx=d[0]-c[0],vy=d[1]-c[1],den=ux*vy-uy*vx;
+    if(Math.abs(den)<1e-9)return;
+    const dx=c[0]-a[0],dy=c[1]-a[1],t=(dx*vy-dy*vx)/den,s=(dx*uy-dy*ux)/den;
+    if(t>=0&&t<=1&&s>=0&&s<=1)return mix(a,b,t);
+  }
+  function stripLoops(r,bank){
+    for(let attempt=0;attempt<180;attempt++){
+      let changed=false;
+      outer:for(let i=0;i<r.length-2;i++)for(let j=i+2;j<r.length;j++){
+        if(i===0&&j===r.length-1)continue;
+        const p=crossing(r[i],r[i+1],r[j],r[(j+1)%r.length]);if(!p)continue;
+        if(!bank)fail('Le trait se croise. Déplace un point du virage pour séparer les passages.');
+        const a=[p,...r.slice(i+1,j+1)],b=[p,...r.slice(j+1),...r.slice(0,i+1)];
+        const areaA=Math.abs(area(a)),areaB=Math.abs(area(b)),trimA=areaA<=areaB;
+        // Chaque bord conserve son segment d’origine, y compris à la fermeture de la boucle.
+        const first=bank.source.get(r[trimA?i:j]),last=bank.source.get(r[trimA?j:i]);
+        if(Math.min(areaA,areaB)>4 && !bank.localFold(first,last,p))
+          fail('Deux portions de piste se recouvrent. Écarte-les ou réduis la largeur.');
+        bank.source.set(p,last);
+        r=trimA?b:a;changed=true;break outer;
+      }
+      if(!changed)return r;
+    }
+    fail('Espace davantage les virages.');
+  }
+  function offset(r,w){
+    const outline=r.map((p,i)=>{
+      const a=r[(i+r.length-1)%r.length],b=r[(i+1)%r.length],u=dist(p,a),v=dist(b,p);
+      const ux=(p[0]-a[0])/u,uy=(p[1]-a[1])/u,vx=(b[0]-p[0])/v,vy=(b[1]-p[1])/v;
+      const factor=w*p[2]/2/Math.max(.18,1+ux*vx+uy*vy);
+      return [p[0]-(uy+vy)*factor,p[1]+(ux+vx)*factor];
+    });
+    const source=new Map(outline.map((p,i)=>[p,i]));
+    function fractionOnEdge(i,hit){
+      const a=outline[i],edge=sub(outline[(i+1)%r.length],a),length2=dot(edge,edge);
+      return length2?Math.max(0,Math.min(1,dot(sub(hit,a),edge)/length2)):0;
+    }
+    function localFold(first,last,hit){
+      // Quand le rayon du virage est inférieur à la demi-largeur, le bord intérieur
+      // repart en arrière. On raccorde ce pli sur une courte portion du tracé.
+      const from=fractionOnEdge(first,hit),to=fractionOnEdge(last,hit);
+      const limit=2.5*Math.min(r[first][2],r[last][2]);
+      let length=0,reversed=false;
+      for(let count=0;count<r.length;count++){
+        const i=(first+count)%r.length,next=(i+1)%r.length;
+        const portion=(i===last?to:1)-(i===first?from:0);
+        length+=portion*dist(r[i],r[next]);
+        if(length>limit)return false;
+        if(portion>0 && dot(sub(outline[next],outline[i]),sub(r[next],r[i]))<0)reversed=true;
+        if(i===last)return reversed;
+      }
+      return false;
+    }
+    return stripLoops(outline,{source,localFold});
+  }
+  const dot=(a,b)=>a[0]*b[0]+a[1]*b[1];
+  const sub=(a,b)=>[a[0]-b[0],a[1]-b[1]];
+  const along=(p,v,t)=>[p[0]+v[0]*t,p[1]+v[1]*t];
+  function insideRing(ring,p){return intersections(ring,p[0]).filter(y=>y>p[1]).length%2===1}
+  function interiorMarker(hole){
+    // Un intervalle ouvert entre deux intersections est dans l'îlot, même à l'épingle.
+    let best=0,marker;
+    const xs=hole.map(p=>p[0]),left=Math.min(...xs),right=Math.max(...xs);
+    for(let i=0;i<25;i++){
+      const x=left+(i+.5)*(right-left)/25,ys=intersections(hole,x);
+      for(let j=0;j+1<ys.length;j+=2){
+        const span=ys[j+1]-ys[j];if(span>best){best=span;marker=[x,(ys[j]+ys[j+1])/2]}
+      }
+    }
+    if(!marker)fail('Élargis l’espace au centre de la boucle.');
+    return marker;
+  }
+  function bankHits(rings,anchor,tangent,normal){
+    const hits=[];
+    rings.forEach((ring,bank)=>ring.forEach((p,i)=>{
+      const q=ring[(i+1)%ring.length],a=dot(sub(p,anchor),tangent),b=dot(sub(q,anchor),tangent);
+      if((a>0)===(b>0))return;
+      const point=mix(p,q,a/(a-b));
+      hits.push({bank,i,point,t:dot(sub(point,anchor),normal)});
+    }));
+    hits.sort((a,b)=>a.t-b.t);
+    const front=hits.findIndex(h=>h.t>0);
+    return front>0?[hits[front-1],hits[front]]:[];
+  }
+  function alignBank(ring,hit,tangent){
+    // Deux petits raccords encadrent un bord droit exactement orthogonal au damier.
+    let ordered=[hit.point,...ring.slice(hit.i+1),...ring.slice(0,hit.i+1),hit.point];
+    let length=0;const vertices=[];
+    for(let i=1;i<ordered.length;i++){length+=dist(ordered[i-1],ordered[i]);vertices.push({p:ordered[i],s:length})}
+    const trim=.6;
+    const remaining=vertices.filter(v=>v.s>trim && v.s<length-trim).map(v=>v.p);
+    if(remaining.length<2)return ring;
+    const near=ordered.find(p=>dist(p,hit.point)>.001);
+    const sign=dot(sub(near,hit.point),tangent)>=0?1:-1;
+    return [along(hit.point,tangent,.35*sign),...remaining,along(hit.point,tangent,-.35*sign)];
+  }
+  function startSection(r,boundaries,target){
+    const projections=r.map((p,i)=>{
+      const q=r[(i+1)%r.length],v=sub(q,p),length=dist(p,q);
+      const f=target?Math.max(0,Math.min(1,dot(sub(target,p),v)/(length*length))):.5;
+      const center=mix(p,q,f);
+      return {i,center,length,unit:v.map(a=>a/length),score:target?dist(target,center):-length};
+    }).sort((a,b)=>a.score-b.score);
+    if(target && projections[0].score>4.5)fail('Touche la chaussée à l’endroit du départ.');
+    const inside=p=>insideRing(boundaries[0],p)&&!insideRing(boundaries[1],p);
+    for(const part of projections){
+      if(target && part.score>projections[0].score+3)break;
+      const [cx,cy]=part.center,candidates=[];
+      for(let x=Math.round(cx)-2;x<=Math.round(cx)+2;x++)for(let y=Math.round(cy)-2;y<=Math.round(cy)+2;y++){
+        const anchor=[x,y];if(!inside(anchor))continue;
+        for(const [dx,dy] of [[1,0],[0,1],[1,1],[1,-1],[2,1],[2,-1],[1,2],[1,-2],[3,1],[3,-1],[1,3],[1,-3],[3,2],[3,-2],[2,3],[2,-3]]){
+          const step=Math.hypot(dx,dy),normal=[dx/step,dy/step];
+          const error=Math.abs(dot(normal,part.unit));if(error>.44)continue;
+          let tangent=[normal[1],-normal[0]];
+          if(dot(tangent,part.unit)<0)tangent=tangent.map(v=>-v);
+          candidates.push({anchor,normal,tangent,step,score:dist(anchor,part.center)+error*5});
+        }
+      }
+      candidates.sort((a,b)=>a.score-b.score);
+      for(const {anchor,normal,tangent,step} of candidates){
+        const hits=bankHits(boundaries,anchor,tangent,normal);
+        if(hits.length!==2||hits[0].bank===hits[1].bank)continue;
+        if(Math.max(-hits[0].t,hits[1].t)+1e-7<step)continue;
+        const banks=boundaries.slice();
+        for(const h of hits)banks[h.bank]=alignBank(banks[h.bank],h,tangent);
+        const grid=[];
+        for(let x=anchor[0]-7;x<=anchor[0]+7;x++)for(let y=anchor[1]-7;y<=anchor[1]+7;y++){
+          const v=sub([x,y],anchor),depth=-dot(v,tangent),side=dot(v,normal);
+          if(depth<-.000001||depth>4||side<hits[0].t-1e-7||side>hits[1].t+1e-7)continue;
+          if(insideRing(banks[0],[x,y])&&!insideRing(banks[1],[x,y]))grid.push({p:[x,y],depth,side:Math.abs(side)});
+        }
+        grid.sort((a,b)=>Math.round(a.depth*1e6)-Math.round(b.depth*1e6)||a.side-b.side);
+        if(grid.length<4)continue;
+        const gridPoints=[];
+        for(let k=Math.ceil((hits[0].t-1e-7)/step);k<=Math.floor((hits[1].t+1e-7)/step);k++){
+          gridPoints.push(along(anchor,normal,k*step).map(Math.round));
+        }
+        const finish={anchor,forward:tangent,ends:hits.map(h=>h.point),gridPoints};
+        // Partir du croisement réel avec le milieu de la piste.
+        let nearest;
+        r.forEach((p,i)=>{
+          const q=r[(i+1)%r.length],a=dot(sub(p,anchor),tangent),b=dot(sub(q,anchor),tangent);
+          if(a>0||b<=0)return;
+          const point=mix(p,q,a/(a-b)),gap=dist(point,anchor);
+          if(!nearest||gap<nearest.gap)nearest={i,point,gap};
+        });
+        if(!nearest||nearest.gap>4)continue;
+        const nodes=[nearest.point,...r.slice(nearest.i+1),...r.slice(0,nearest.i+1)].map(p=>p.slice(0,2)).filter((p,i,a)=>!i||dist(p,a[i-1])>.02);
+        if(dist(nodes[0],nodes.at(-1))<.02)nodes.pop();
+        return {finish,grid:grid.slice(0,4).map(v=>v.p),nodes,boundaries:banks};
+      }
+    }
+    fail('Écarte légèrement les deux portions de piste près du départ.');
+  }
+  function gateView(gate){
+    let ends=gate.ends,forward=gate.forward;
+    if(!ends){
+      const {axis,at,min,max,direction}=gate;
+      ends=axis==='x'?[[at,min],[at,max]]:[[min,at],[max,at]];
+      forward=axis==='x'?[direction,0]:[0,direction];
+    }
+    const [a,b]=ends;
+    function stripe(offset=0){
+      const [x1,y1]=along(a,forward,offset),[x2,y2]=along(b,forward,offset);
+      return {x1,y1,x2,y2};
+    }
+    return {stripe,mid:mix(a,b,.5),angle:Math.atan2(forward[1],forward[0])*180/Math.PI};
+  }
+  function crossGate(p,m,g){
+    const a=dot(sub([p.x,p.y],g.anchor),g.forward),b=dot(sub([m.x,m.y],g.anchor),g.forward);
+    if(a>1e-8||b<=1e-8)return null;
+    const point=mix([p.x,p.y],[m.x,m.y],Math.max(0,-a)/(b-a));
+    const span=sub(g.ends[1],g.ends[0]),k=dot(sub(point,g.ends[0]),span)/dot(span,span);
+    return k>=-1e-8&&k<=1+1e-8?{point,distance:Math.round(b*1e8)/1e8}:null;
+  }
+
+  function build(d,preview=false){
+    if(typeof d?.name!=='string'||!d.name.trim()||d.name.length>40)fail('Donne un nom au circuit (40 caractères maximum).');
+    const r=stripLoops(d.reverse?shape(d).reverse():shape(d),false);
+    if(Math.abs(area(r))<65)fail('Agrandis la boucle pour laisser un espace au milieu.');
+    const boundaries=[offset(r,1),offset(r,-1)].sort((a,b)=>Math.abs(area(b))-Math.abs(area(a)));
+    const [outer,hole]=boundaries;
+    for(let i=0;i<outer.length;i++)for(let j=0;j<hole.length;j++)if(crossing(outer[i],outer[(i+1)%outer.length],hole[j],hole[(j+1)%hole.length]))fail('Deux bords se touchent. Écarte les virages ou affine le trait.');
+    if(d.finishPoint && (!Array.isArray(d.finishPoint)||d.finishPoint.length!==2||d.finishPoint.some(v=>!Number.isFinite(v))))fail('Position de la ligne invalide.');
+    let section;
+    try{section=startSection(r,boundaries,d.finishPoint)}catch(e){if(preview)return {boundaries};throw e}
+    const {finish,nodes}=section;
+    return {...section,id:d.id,name:d.name.trim(),start:finish,width:Math.ceil(Math.max(...outer.map(p=>p[0])))+2,height:Math.ceil(Math.max(...outer.map(p=>p[1])))+2,checkpoints:[],sectors:[[...nodes,nodes[0]]],kerbs:[[],[]],lapMarkers:[interiorMarker(hole)],winding:Math.sign(area(r))};
+  }
+  // Sur iPad les contacts natifs restent associés au document, même quand la
+  // grille SVG remplace ses éléments ou que Safari annule un PointerEvent.
+  function bindTouchPair(surface,enabled,begin,move,finish){
+    const ids=new Set();
+    let active=false,signature='';
+    function handle(event){
+      if(event.type==='touchstart' && enabled()){
+        const box=surface.getBoundingClientRect();
+        for(const t of event.changedTouches){
+          if(surface.contains(t.target) || (t.clientX>=box.left&&t.clientX<=box.right&&t.clientY>=box.top&&t.clientY<=box.bottom&&surface.contains(document.elementFromPoint(t.clientX,t.clientY))))ids.add(t.identifier);
+        }
+      }
+      const points=Array.from(event.touches).filter(t=>ids.has(t.identifier)).sort((a,b)=>a.identifier-b.identifier);
+      const current=new Set(points.map(t=>t.identifier));
+      for(const id of ids)if(!current.has(id))ids.delete(id);
+      if(points.length<2 && !active)return;
+      if(event.cancelable)event.preventDefault();
+      if(points.length>=2 && enabled()){
+        const [a,b]=points;
+        const pair={x:(a.clientX+b.clientX)/2,y:(a.clientY+b.clientY)/2,
+          distance:Math.max(1,Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY))};
+        const next=a.identifier+'-'+b.identifier;
+        if(!active||signature!==next){active=true;signature=next;begin(pair)}
+        else if(event.type==='touchmove')move(pair);
+      }else if(!points.length || !enabled()){
+        active=false;signature='';finish();
+      }else signature='';
+    }
+    for(const type of ['touchstart','touchmove','touchend','touchcancel'])
+      document.addEventListener(type,handle,{capture:true,passive:false});
+    surface.addEventListener('gesturestart',e=>{if(enabled())e.preventDefault()},{passive:false});
+    surface.addEventListener('gesturechange',e=>{if(enabled())e.preventDefault()},{passive:false});
+    return ()=>active;
+  }
+
+  const prefix='raceapp:atelier:trace:';
+  const week=7*24*60*60*1000;
+  const personalId=id=>typeof id==='string' && /^perso-[a-z0-9-]{1,64}$/i.test(id);
+  function migrate() {
+    const old=localStorage.getItem(key);
+    if(!old)return;
+    const rows=JSON.parse(old);
+    if (!Array.isArray(rows))return;
+    const now=Date.now();
+    for(const d of rows) {
+      if (!personalId(d?.id) || localStorage.getItem(prefix+d.id))continue;
+      localStorage.setItem(prefix+d.id,JSON.stringify({...d,expiresAt:now+week}));
+    }
+    localStorage.removeItem(key);
+  }
+  function list() {
+    const rows=[];
+    try {
+      migrate();
+      const now=Date.now();
+      for(const k of Object.keys(localStorage).filter(k=>k.startsWith(prefix))){
+        let d;
+        try {d=JSON.parse(localStorage.getItem(k));} catch {continue;}
+        if(!d || !Number.isFinite(d.expiresAt))continue;
+        if(d.expiresAt<=now){localStorage.removeItem(k);continue;}
+        rows.push(d);
+      }
+    } catch {}
+    return rows.sort((a,b)=>b.expiresAt-a.expiresAt);
+  }
+  function clean(d) {
+    if (!personalId(d?.id) || d.closed!==true)fail('Ferme la boucle avant d’exporter le circuit.');
+    if(d.reverse!==undefined && typeof d.reverse!=='boolean')fail('Sens de course invalide.');
+    const design={id:d.id,name:d.name,width:d.width,points:d.points,closed:true};
+    for(const k of ['widths','finishPoint','reverse'])if(d[k]!==undefined)design[k]=d[k];
+    build(design);
+    return design;
+  }
+  function save(d) {
+    const saved={...clean(d),expiresAt:Date.now()+week};
+    localStorage.setItem(prefix+saved.id,JSON.stringify(saved));
+    return saved.expiresAt;
+  }
+  function restorePreview(d) {
+    const now=Date.now(),expiresAt=Math.min(d?.expiresAt ?? now+week,now+week);
+    if(!Number.isFinite(expiresAt) || expiresAt<=now)return;
+    const existing=list().find(item=>item.id===d.id);
+    if(!existing || existing.expiresAt<expiresAt)
+      localStorage.setItem(prefix+d.id,JSON.stringify({...clean(d),expiresAt}));
+  }
+  function toFile(d){return {format:'raceapp-circuit',version:1,circuit:clean(d)};}
+  function fromFile(file){
+    if(file?.format!=='raceapp-circuit'||file.version!==1)fail('Choisis un fichier de circuit Raceapp au format JSON version 1.');
+    return clean(file.circuit);
+  }
+  async function addOfficial(picker,courses) {
+    if(location.protocol==='file:')return;
+    try {
+      const data=await fetch('/api/circuits',{signal:AbortSignal.timeout(5000)}).then(r=>r.json());
+      const group=document.createElement('optgroup');group.label='Circuits officiels';
+      for(const d of data.circuits){
+        if(!d.id.startsWith('officiel-') || Object.hasOwn(courses,d.id))continue;
+        const course=build(d);courses[d.id]=course;group.append(new Option(course.name,d.id));
+      }
+      if(group.children.length)picker.insertBefore(group,picker.querySelector('optgroup'));
+      const requested=new URLSearchParams(location.search).get('circuit');
+      if(picker.value==='r10' && requested?.startsWith('officiel-') && Object.hasOwn(courses,requested)){
+        picker.value=requested;picker.dispatchEvent(new Event('change'));
+      }
+    } catch {}
+  }
+  return {shape,build,list,save,restorePreview,toFile,fromFile,addOfficial,gateView,crossGate,bindTouchPair};
+})();
+</script><script>'use strict';
+const $=id=>document.getElementById(id), sheet=$('sheet'), layer=$('drawing'), lib=RaceAtelier;
+const uid=()=> 'perso-'+crypto.randomUUID();
+const fresh=()=>({id:uid(),name:'Mon circuit',width:4,points:[],closed:false});
+let draft=fresh(),mode='pen',selected=-1,segment=-1,gesture=null,history=[],dirty=false;
+const distance=(p,q)=>Math.hypot(p[0]-q[0],p[1]-q[1]);
+function mark(){history.push(JSON.stringify(draft));if(history.length>60)history.shift();dirty=true}
+function hint(t){$('hint').textContent=t}
+function point(e){const pt=new DOMPoint(e.clientX,e.clientY).matrixTransform(sheet.getScreenCTM().inverse());return [Math.max(3,Math.min(93,pt.x)),Math.max(3,Math.min(61,pt.y))].map(v=>Math.round(v*20)/20)}
+function path(points,closed){return points.length?'M'+points.map(p=>p.slice(0,2).join(',')).join(' L')+(closed?' Z':''):''}
+function svg(tag,attrs){const el=document.createElementNS(sheet.namespaceURI,tag);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,v);layer.append(el)}
+function redraw(){
+  layer.replaceChildren();
+  let pts=draft.points,closed=draft.closed;
+  if(gesture?.raw)pts=pts.concat(gesture.raw);
+  if(closed)try{pts=lib.shape(draft)}catch{}
+  const d=path(pts,closed);
+  svg('path',{d,fill:'none',stroke:'#284f46','stroke-width':draft.width,'stroke-linecap':'round','stroke-linejoin':closed?'miter':'round','stroke-miterlimit':3,opacity:'.83'});
+  svg('path',{d,fill:'none',stroke:'#d1dfbc','stroke-width':.11,'stroke-dasharray':'.48 .48'});
+  if(mode==='edit'&&closed)draft.points.forEach(([cx,cy],i)=>svg('circle',{cx,cy,r:selected===i?.55:.38,fill:selected===i?'#fa9c37':'#f5ffcd',stroke:'#193f36','stroke-width':.12}));
+  if(closed){
+    try{
+      const {boundaries,finish}=lib.build(draft,true);
+      layer.replaceChildren();
+      svg('path',{d:boundaries.map(b=>path(b,true)).join(' '),fill:'#385d51','fill-rule':'evenodd',stroke:'#173e34','stroke-width':'.13'});
+      svg('path',{d,fill:'none',stroke:'#d1dfbc','stroke-width':.11,'stroke-dasharray':'.48 .48'});
+      if(segment>=0){
+        const a=draft.points[segment],b=draft.points[(segment+1)%draft.points.length];
+        svg('path',{d:path([a,b],false),stroke:'#f4ba65','stroke-width':'.32',fill:'none','stroke-dasharray':'.55 .32'});
+      }
+      if(finish){
+        const view=lib.gateView(finish),ends=view.stripe();
+        svg('line',{...ends,stroke:'#162322','stroke-width':'.6'});
+        svg('line',{...ends,stroke:'#f4edd2','stroke-width':'.46','stroke-dasharray':'.42 .28'});
+        for(const [cx,cy] of finish.gridPoints)svg('circle',{cx,cy,r:.19,fill:'#fff',stroke:'#193f36','stroke-width':.08});
+        const translate=view.mid;
+        svg('path',{d:'M .6 0H3 m -.8 -.65 .8 .65 -.8 .65',transform:'translate('+translate.join(' ')+') rotate('+view.angle+')',stroke:'#ffbd63','stroke-width':'.38',fill:'none'});
+      }
+      if(mode==='edit')draft.points.forEach(([cx,cy],i)=>svg('circle',{cx,cy,r:selected===i?.55:.38,fill:selected===i?'#fa9c37':'#f5ffcd',stroke:'#193f36','stroke-width':'.12'}));
+    }catch{}
+  }
+  if(pts.length&&!closed)svg('circle',{cx:pts[0][0],cy:pts[0][1],r:.65,fill:'#f5ad48'});
+  $('pen').setAttribute('aria-pressed',mode==='pen');$('edit').setAttribute('aria-pressed',mode==='edit');
+  $('undo').disabled=!history.length;$('close').disabled=closed||draft.points.length<3;
+  $('edit').disabled=!closed;$('pen').disabled=closed;$('save').disabled=$('test').disabled=$('export').disabled=!closed;
+  $('round').disabled=!closed||selected<0;$('round').value=selected<0?65:Math.round(draft.points[selected][2]*100);
+  $('roundVal').textContent=selected<0?'—':$('round').value+' %';
+  $('finish').disabled=$('reverse').disabled=!closed;
+  $('finish').setAttribute('aria-pressed',mode==='finish');
+  $('widthScope').textContent=segment>=0?'· segment sélectionné':'· toute la piste';
+  const width=draft.widths?.[segment]??draft.width;
+  $('width').value=width;$('widthVal').textContent=width.toLocaleString('fr')+' carreaux';
+}
+function simplify(pts,tolerance){
+  if(pts.length<=2)return pts;
+  const keep=new Set([0,pts.length-1]),stack=[[0,pts.length-1]];
+  while(stack.length){const [a,b]=stack.pop(),p=pts[a],q=pts[b],x=q[0]-p[0],y=q[1]-p[1],len=x*x+y*y;
+    let far=-1,best=tolerance;
+    for(let i=a+1;i<b;i++){const r=pts[i],t=len?Math.max(0,Math.min(1,((r[0]-p[0])*x+(r[1]-p[1])*y)/len)):0;
+      const err=Math.hypot(r[0]-p[0]-t*x,r[1]-p[1]-t*y);if(err>best){best=err;far=i}}
+    if(far>=0){keep.add(far);stack.push([a,far],[far,b])}
+  }
+  return [...keep].sort((a,b)=>a-b).map(i=>pts[i]);
+}
+function closeLoop(){
+  const p=draft.points;if(p.length<3)return;
+  if(p.length>3&&distance(p[0],p.at(-1))<1.4)p.pop();
+  draft.closed=true;mode='edit';selected=-1;redraw();hint('Touche un point pour régler son arrondi. Fais-le glisser pour déplacer le virage.');
+}
+sheet.onpointerdown=e=>{
+  if(gesture||e.button!==0)return;
+  const p=point(e);
+  if(mode==='finish'){
+    const previous=draft.finishPoint;draft.finishPoint=p;
+    try{lib.build(draft)}catch(err){draft.finishPoint=previous;hint(err.message);return}
+    draft.finishPoint=previous;mark();draft.finishPoint=p;
+    mode='edit';redraw();hint('Ligne placée. La flèche indique le sens de course.');return;
+  }
+  if(mode==='edit'){
+    let nearest=-1,best=2.2;draft.points.forEach((v,i)=>{const n=distance(p,v);if(n<best){nearest=i;best=n}});
+    selected=nearest;segment=-1;
+    if(nearest<0){
+      let bestDistance=3.2;
+      draft.points.forEach((a,i)=>{
+        const b=draft.points[(i+1)%draft.points.length],dx=b[0]-a[0],dy=b[1]-a[1];
+        const t=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/(dx*dx+dy*dy)));
+        const d=distance(p,[a[0]+t*dx,a[1]+t*dy]);
+        if(d<bestDistance){bestDistance=d;segment=i}
+      });
+      if(segment>=0)hint('Règle la largeur du segment sélectionné avec le curseur.');
+      redraw();return;
+    }
+    mark();gesture={id:e.pointerId,drag:nearest,origin:p,original:[...draft.points[nearest]]};
+    hint('Vers 0 %, le virage devient pointu. Vers 100 %, il s’arrondit.');
+  }else{
+    if(draft.points.length&&distance(p,draft.points.at(-1))>3){hint('Reprends au bout du trait ou clique sur « Fermer la boucle ».');return}
+    mark();gesture={id:e.pointerId,raw:[p]};
+  }
+  sheet.setPointerCapture(e.pointerId);redraw();
+};
+sheet.onpointermove=e=>{
+  if(gesture?.id!==e.pointerId)return;
+  const p=point(e);
+  if(gesture.raw){if(distance(p,gesture.raw.at(-1))>.24)gesture.raw.push(p)}
+  else{const {original,origin,drag}=gesture;draft.points[drag]=[Math.max(3,Math.min(93,original[0]+p[0]-origin[0])),Math.max(3,Math.min(61,original[1]+p[1]-origin[1])),original[2]]}
+  redraw();
+};
+sheet.onpointerup=e=>{
+  if(gesture?.id!==e.pointerId)return;
+  if(gesture.raw){
+    const p=point(e);if(distance(p,gesture.raw.at(-1))>.15)gesture.raw.push(p);
+    const raw=simplify(gesture.raw,.48);for(const q of raw)if(!draft.points.length||distance(q,draft.points.at(-1))>.6)draft.points.push([...q,.65]);
+    if(draft.points.length>180){draft=JSON.parse(history.pop());hint('Trait trop détaillé. Dessine moins de petits zigzags.')}
+    else if(draft.points.length>=4&&distance(draft.points[0],draft.points.at(-1))<2.5)closeLoop();
+    else hint('Continue depuis le bout du trait ou ferme la boucle.');
+  }
+  gesture=null;redraw();
+};
+sheet.onpointercancel=()=>{if(gesture){gesture=null;draft=JSON.parse(history.pop());selected=-1;redraw()}};
+$('close').onclick=()=>{mark();closeLoop()};
+$('undo').onclick=()=>{if(!history.length)return;draft=JSON.parse(history.pop());$('name').value=draft.name;selected=segment=-1;mode=draft.closed?'edit':'pen';redraw();hint('Dernière modification annulée.')};
+for(const [id,apply] of [['width',v=>{
+  if(segment<0){draft.width=v;delete draft.widths}
+  else{draft.widths??=draft.points.map(()=>draft.width);draft.widths[segment]=v}
+}],['round',v=>draft.points[selected][2]=v/100]]){
+  let changing=false;$(id).oninput=()=>{if(!changing){mark();changing=true}apply(Number($(id).value));redraw()};$(id).onchange=()=>changing=false;
+}
+$('name').oninput=()=>{draft.name=$('name').value;dirty=true};
+function shelf(){const list=lib.list();$('shelf').replaceChildren(...list.map(d=>new Option(d.name+' · jusqu’au '+new Date(d.expiresAt).toLocaleDateString('fr-BE'),d.id)));$('load').disabled=!list.length}
+function storeDraft(){try{lib.build(draft);lib.save(draft);dirty=false;shelf();$('shelf').value=draft.id;hint('Circuit enregistré pour 7 jours sur cet appareil.');return true}catch(e){hint(e.message);return false}}
+$('save').onclick=storeDraft;
+$('test').onclick=()=>{
+  let saved=lib.list().find(d=>d.id===draft.id);
+  if(!saved || dirty){
+    if(!storeDraft())return;
+    saved=lib.list().find(d=>d.id===draft.id);
+  }
+  const url=new URL('local.html',location.href);
+  url.search=new URLSearchParams({mode:'solo',from:'atelier',circuit:draft.id});
+  if(location.protocol==='file:')url.hash='dessin='+encodeURIComponent(JSON.stringify(saved));
+  location.href=url.href;
+};
+function openDraft(d){if(dirty&&!confirm('Abandonner les modifications non enregistrées ?'))return false;draft=d;history=[];selected=segment=-1;dirty=false;mode=d.closed?'edit':'pen';$('name').value=d.name;redraw();hint(d.closed?'Sélectionne un virage à retoucher.':'Maintiens le clic et dessine. Reviens au point de départ pour fermer le circuit.');return true}
+$('export').onclick=()=>{
+  try {
+    const file=lib.toFile(draft);
+    const blob=new Blob([JSON.stringify(file,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download=(draft.name.trim().replace(/[^a-z0-9à-ÿ_-]+/gi,'-') || 'circuit')+'.json';
+    document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+    hint('Circuit exporté. Tu peux conserver ce fichier sans limite de durée.');
+  } catch(error){hint(error.message);}
+};
+$('import').onchange=async event=>{
+  const input=event.target,file=input.files[0];
+  try {
+    if(!file)return;
+    if(file.size>65536)throw new Error('Le fichier dépasse 64 Ko.');
+    const d=lib.fromFile(JSON.parse(await file.text()));
+    if(openDraft(d)){dirty=true;hint('Circuit ouvert. Enregistre-le pour le retrouver sur cet appareil.');}
+  } catch(error){hint('Import impossible. '+error.message);}
+  finally{input.value='';}
+};
+$('load').onclick=()=>{const d=lib.list().find(v=>v.id===$('shelf').value);if(d)openDraft(d);else{shelf();hint('Ce circuit personnel a expiré. Tu peux rouvrir sa copie JSON.')}};
+$('fresh').onclick=()=>openDraft(fresh());
+$('pen').onclick=()=>hint('Maintiens le clic pour tracer la piste.');$('edit').onclick=()=>{mode='edit';redraw();hint('Clique sur un point pour modifier un virage ou entre deux points pour régler la largeur du segment.')};
+$('finish').onclick=()=>{mode='finish';selected=segment=-1;redraw();hint('Clique sur le tracé à l’endroit où placer la ligne de départ et d’arrivée.')};
+$('reverse').onclick=()=>{mark();draft.reverse=!draft.reverse;redraw();hint('Sens de course inversé. La flèche indique la nouvelle direction.')};
+shelf();
+const returningId = new URLSearchParams(location.search).get('circuit');
+const returningDraft = returningId && lib.list().find(item => item.id === returningId);
+openDraft(returningDraft || draft);
+if (returningDraft) $('shelf').value = returningId;
+
+// Le premier contact tactile reste réversible jusqu'au relevé du doigt.
+{
+  const down=sheet.onpointerdown, move=sheet.onpointermove, up=sheet.onpointerup;
+  const fingers=new Map();
+  let owner=null, pen=null, navigating=false, initial=null, snapshot=null;
+  function remember(){
+    return {draft:structuredClone(draft),history:history.slice(),mode,selected,segment,dirty};
+  }
+  function rollback(){
+    if(!snapshot)return;
+    ({draft,history,mode,selected,segment,dirty}=snapshot);
+    gesture=null;snapshot=null;owner=null;redraw();
+  }
+  function pair(){
+    const [a,b]=[...fingers.values()];
+    return {x:(a.x+b.x)/2,y:(a.y+b.y)/2,d:Math.max(1,Math.hypot(a.x-b.x,a.y-b.y))};
+  }
+  function anchor(m=pair()){
+    const view=sheet.viewBox.baseVal;
+    const center=new DOMPoint(m.x,m.y).matrixTransform(sheet.getScreenCTM().inverse());
+    initial={m,width:view.width,center};
+  }
+  function panZoom(m=pair()){
+    const rect=sheet.getBoundingClientRect();
+    const width=Math.min(96,Math.max(8,initial.width*initial.m.d/m.d)),height=width*2/3;
+    const x=initial.center.x-(m.x-rect.left)*width/rect.width;
+    const y=initial.center.y-(m.y-rect.top)*height/rect.height;
+    sheet.setAttribute('viewBox',[Math.max(0,Math.min(96-width,x)),Math.max(0,Math.min(64-height,y)),width,height].join(' '));
+  }
+  const nativeNavigation=lib.bindTouchPair(sheet,()=>pen===null,
+    p=>{rollback();anchor({...p,d:p.distance})},p=>panZoom({...p,d:p.distance}),()=>{initial=null;fingers.clear();navigating=false});
+  sheet.onpointerdown=e=>{
+    if(e.button!==0||nativeNavigation())return;
+    if(e.pointerType==='touch'){
+      if(pen!==null||('ontouchstart' in window && e.isPrimary===false))return;
+      fingers.set(e.pointerId,{x:e.clientX,y:e.clientY});sheet.setPointerCapture(e.pointerId);
+      if(!('ontouchstart' in window)&&fingers.size>=2){rollback();navigating=true;anchor();return}
+      if(navigating)return;
+    }else if(e.pointerType==='pen'){
+      rollback();fingers.clear();navigating=false;pen=e.pointerId;
+    }else if(owner!==null||navigating)return;
+    snapshot=remember();owner=e.pointerId;sheet.setPointerCapture(owner);down(e);
+  };
+  sheet.onpointermove=e=>{
+    if(nativeNavigation())return;
+    if(fingers.has(e.pointerId)){
+      fingers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      if(navigating){if(fingers.size>=2)panZoom();return}
+    }
+    if(e.pointerId!==owner)return;
+    const samples=e.pointerType==='pen'?e.getCoalescedEvents?.():null;
+    if(samples?.length)for(const sample of samples)move(sample);
+    else move(e);
+  };
+  function end(e,cancelled){
+    if(e.pointerId===owner){
+      if(cancelled)rollback();else up(e);
+      snapshot=null;owner=null;
+    }
+    if(e.pointerId===pen)pen=null;
+    if(fingers.delete(e.pointerId)){
+      if(fingers.size>=2)anchor();
+      if(!fingers.size)navigating=false;
+    }
+  }
+  sheet.onpointerup=e=>end(e,false);
+  sheet.onpointercancel=sheet.onlostpointercapture=e=>end(e,true);
+  $('resetView').onclick=()=>sheet.setAttribute('viewBox','0 0 96 64');
+  hint('Dessine au Pencil ou à un doigt. À deux doigts, pince pour zoomer ou glisse pour déplacer la feuille.');
+}
+</script></body></html>

@@ -117,36 +117,7 @@ select{font:inherit;min-height:42px;border:1px solid var(--edge);border-radius:1
 .shell.playing #board > *{pointer-events:none}.shell.playing #board > .choice{pointer-events:auto}.shell.playing #board{touch-action:none;user-select:none;-webkit-user-select:none}
 .shell:not(.playing) .circuit svg[data-overview="true"]{height:auto;min-height:0;max-height:none;aspect-ratio:63.2/55.2}
 .shell #replay-board{aspect-ratio:63.2/55.2}
-</style><style>.race-nav{display:flex;align-items:center;gap:14px;max-width:1100px;margin:auto;padding:6px 16px}.race-nav #forfeit{width:auto;min-height:36px;padding:5px 12px}</style><script src="atelier-core.js"></script><script>// Une entrée par course et par siège. Actualiser l'écran conserve le même résultat.
-function recordRace(room, label, indexes){
-  if(!room || room.state==='lobby' || !room.raceId || label==='Tutoriel')return;
-  for(const i of indexes){
-    const p=room.players[i]; if(!p)continue;
-    const key='raceapp:result:'+room.raceId+':'+i;
-    const result=p.forfeit?'Forfait':room.state!=='finished'?'En cours':
-      !room.winners.includes(i)?'Perdue':room.winners.length>1?'Égalité':'Gagnée';
-    const value=JSON.stringify({name:p.name,mode:label,result});
-    try{if(localStorage.getItem(key)!==value)localStorage.setItem(key,value);}catch{}
-  }
-}
-function renderStats(){
-  const body=document.querySelector('#stats-body');if(!body)return;
-  const rows=new Map();
-  for(const key of Object.keys(localStorage)){
-    if(!key.startsWith('raceapp:result:'))continue;
-    let s;try{s=JSON.parse(localStorage.getItem(key));}catch{continue;}
-    const id=JSON.stringify([s.name,s.mode]);
-    const row=rows.get(id)??[s.name,s.mode,0,0,0,0];
-    row[2]++;if(s.result==='Gagnée')row[3]++;if(s.result==='Égalité')row[4]++;if(s.result==='Forfait')row[5]++;
-    rows.set(id,row);
-  }
-  for(const row of rows.values()){
-    const tr=body.insertRow();for(const value of row)tr.insertCell().textContent=value;
-  }
-  document.querySelector('#empty').hidden=rows.size>0;
-}
-document.addEventListener('DOMContentLoaded',renderStats);
-</script><link rel="stylesheet" href="ui.css"></head>
+</style><style>.race-nav{display:flex;align-items:center;gap:14px;max-width:1100px;margin:auto;padding:6px 16px}.race-nav #forfeit{width:auto;min-height:36px;padding:5px 12px}</style><script src="atelier-core.js"></script><script src="profile.js"></script><script src="stats.js"></script><link rel="stylesheet" href="ui.css"></head>
 <body class="grid-scene">
   <nav class="race-nav" aria-label="Navigation"><button type="button" class="back-button" id="home">Retour</button><button id="forfeit" type="button" hidden>Déclarer forfait</button></nav><main class="shell">
     <header class="mast">
@@ -378,6 +349,7 @@ function fillCoursePicker(picker){
   if(group.children.length)picker.append(group);
   const requested=new URLSearchParams(location.search).get('circuit');
   picker.value=requested && Object.hasOwn(seasonCourses,requested)?requested:'r10';
+  void RaceAtelier.addOfficial(picker,seasonCourses);
 }
 const courseFor = room => Object.hasOwn(seasonCourses,room?.course) ? seasonCourses[room.course] : ({paper:paperCourse,spa:spaCourse,oval:ovalCourse})[room?.course] ?? straightCourse;
 const paperSectors = [
@@ -610,7 +582,7 @@ const game = byId('game');
 const primary = byId('primary');
 const count = byId('driver-count');
 if(location.protocol==='file:' && location.hash.startsWith('#dessin=')){
-  try{const d=JSON.parse(decodeURIComponent(location.hash.slice(8)));RaceAtelier.build(d);RaceAtelier.save(d)}catch{}
+  try{const d=JSON.parse(decodeURIComponent(location.hash.slice(8)));RaceAtelier.restorePreview(d)}catch{}
 }
 const trackPicker=byId('track');fillCoursePicker(trackPicker);
 trackPicker.addEventListener('change',()=>render());
@@ -619,7 +591,7 @@ let selected = null;
 let zoom = 0;
 const pending = false;
 let primaryAction = null;
-const names = ['Brice','Papa','Joueur 3','Joueur 4'];
+const names = ['Joueur 1','Joueur 2','Joueur 3','Joueur 4'];
 
 const launch = new URLSearchParams(location.search);
 const mode = launch.get('mode');
@@ -718,6 +690,7 @@ function refreshNames() {
     field.value = names[index];
     field.maxLength = 24;
     if(ai && index===1) field.readOnly=true;
+    if(index===0 && RaceProfile.user){field.value=RaceProfile.user.name;field.readOnly=true;}
     field.required = true;
     fields.append(label,field);
   }
@@ -725,13 +698,17 @@ function refreshNames() {
 
 function startRace() {
   aiProgress=0;safeSegments.clear();
+  if (!tutorial && trackPicker.value.startsWith('perso-') && !RaceAtelier.list().some(d=>d.id===trackPicker.value)) {
+    alert('Ce circuit personnel a expiré. Choisis un autre tracé.');
+    location.reload();return;
+  }
   const selectedCourse=seasonCourses[trackPicker.value];
   if(ai)prepareRoad(selectedCourse.nodes);
   stopReplay();
   const players = Array.from(byId('names').querySelectorAll('input'),(field,index) =>
     racer(field.value.trim() || 'Joueur '+(index+1),null,index,tutorial?ovalCourse:selectedCourse));
   const lapGoal = byId('lap-goal').value === '2' ? 2 : 1;
-  room = {raceId:crypto.randomUUID(),course:tutorial?'oval':selectedCourse.id,lapGoal:tutorial?1:lapGoal,players,turn:0,you:0,round:1,state:'racing',winners:[],
+  room = {raceId:crypto.randomUUID(),started:Date.now(),owner:RaceProfile.user?.id,circuitName:selectedCourse.name,course:tutorial?'oval':selectedCourse.id,lapGoal:tutorial?1:lapGoal,players,turn:0,you:0,round:1,state:'racing',winners:[],
     doubleConfirm:byId('double-confirm').checked };
   selected = null;
   camera = null;
@@ -1371,8 +1348,11 @@ function render(){
 
 
 
-entry.addEventListener('submit',event => {
+entry.addEventListener('submit',async event => {
   event.preventDefault();
+  await RaceProfile.ready;
+  if (room) return;
+  refreshNames();
   startRace();
 });
 count.addEventListener('change',refreshNames);
@@ -1416,7 +1396,12 @@ byId('forfeit').onclick=()=>{
 function exitLocal(e){e.preventDefault();
   if(room?.state==='racing'){
     if(!confirm(solo?'Quitter cette course ?':'Quitter la partie sur cet écran et enregistrer le forfait ?'))return;
-    if(!solo){forfeitRace(room,ai?0:room.turn);render();}
+    if(!tutorial){
+      forfeitRace(room,ai||solo?0:room.turn);
+      // Quitter arrête la course sur cet appareil pour tous les sièges.
+      if(room.owner && room.state==='racing')room.players[0].forfeit=true;
+      recordRace(room,ai?'Contre l’IA':solo?'Solo':'Même écran',ai?[0]:room.players.map((_,i)=>i));
+    }
   }
   if (e.currentTarget === byId('home')) {
     if (tutorial) { location.href = 'tutorial.html#ovale'; return; }
@@ -1431,6 +1416,7 @@ function exitLocal(e){e.preventDefault();
 byId('home').onclick=exitLocal;document.querySelector('.mast a').onclick=exitLocal;
 byId('leave').onclick=exitLocal;
 refreshNames();
+RaceProfile.ready.then(()=>{if(!room)refreshNames()});
 if(tutorial){document.querySelector('.mast p').textContent='Tutoriel · Un tour';byId('circuit-title').textContent='Petit ovale';startRace();}else render();
 
 </script>

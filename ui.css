@@ -46,3 +46,15 @@ button.back-button:active { transform: translateY(1px); }
 @media (prefers-reduced-motion: reduce) {
   .grid-scene::before { animation: none; }
 }
+.profile-page { max-width:520px; margin:4vh auto; padding:20px; }
+.profile-page h1 { margin:20px 0 8px; }
+.profile-page #auth { display:grid; gap:7px; margin:18px 0; }
+.profile-page input { box-sizing:border-box; min-height:44px; width:100%; padding:9px 12px; color:#f0f5e8; background:#15221c; border:1px solid #687e70; border-radius:9px; font:inherit; }
+.profile-page #submit { margin-top:8px; }
+.profile-page #feedback:empty { display:none; }
+.profile-page #feedback { color:#ffcf8a; }
+.profile-page .form-help { font-size:.9rem; color:#bccbbd; }
+.account-tabs { display:flex; flex-wrap:wrap; gap:6px; }
+.account-tabs button[aria-pressed=false],.profile-page .secondary { color:#d9e6d9; background:#293b30; }
+.return-link,.pilot-link { display:inline-flex; align-items:center; min-height:44px; padding:4px 14px; border:1px solid #617a68; border-radius:99px; color:#e7f1df; background:#24362a; text-decoration:none; font:650 14px/1.3 system-ui,sans-serif; }
+.pilot-link:focus-visible,.return-link:focus-visible { outline:3px solid #d1f895; outline-offset:2px; }

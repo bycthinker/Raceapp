@@ -258,7 +258,76 @@ globalThis.RaceAtelier=(()=>{
     return ()=>active;
   }
 
-  function list(){try{return JSON.parse(localStorage.getItem(key)||'[]')}catch{return []}}
-  function save(d){const all=list().filter(x=>x.id!==d.id);localStorage.setItem(key,JSON.stringify([...all,d]))}
-  return {shape,build,list,save,gateView,crossGate,bindTouchPair};
+  const prefix='raceapp:atelier:trace:';
+  const week=7*24*60*60*1000;
+  const personalId=id=>typeof id==='string' && /^perso-[a-z0-9-]{1,64}$/i.test(id);
+  function migrate() {
+    const old=localStorage.getItem(key);
+    if(!old)return;
+    const rows=JSON.parse(old);
+    if (!Array.isArray(rows))return;
+    const now=Date.now();
+    for(const d of rows) {
+      if (!personalId(d?.id) || localStorage.getItem(prefix+d.id))continue;
+      localStorage.setItem(prefix+d.id,JSON.stringify({...d,expiresAt:now+week}));
+    }
+    localStorage.removeItem(key);
+  }
+  function list() {
+    const rows=[];
+    try {
+      migrate();
+      const now=Date.now();
+      for(const k of Object.keys(localStorage).filter(k=>k.startsWith(prefix))){
+        let d;
+        try {d=JSON.parse(localStorage.getItem(k));} catch {continue;}
+        if(!d || !Number.isFinite(d.expiresAt))continue;
+        if(d.expiresAt<=now){localStorage.removeItem(k);continue;}
+        rows.push(d);
+      }
+    } catch {}
+    return rows.sort((a,b)=>b.expiresAt-a.expiresAt);
+  }
+  function clean(d) {
+    if (!personalId(d?.id) || d.closed!==true)fail('Ferme la boucle avant d’exporter le circuit.');
+    if(d.reverse!==undefined && typeof d.reverse!=='boolean')fail('Sens de course invalide.');
+    const design={id:d.id,name:d.name,width:d.width,points:d.points,closed:true};
+    for(const k of ['widths','finishPoint','reverse'])if(d[k]!==undefined)design[k]=d[k];
+    build(design);
+    return design;
+  }
+  function save(d) {
+    const saved={...clean(d),expiresAt:Date.now()+week};
+    localStorage.setItem(prefix+saved.id,JSON.stringify(saved));
+    return saved.expiresAt;
+  }
+  function restorePreview(d) {
+    const now=Date.now(),expiresAt=Math.min(d?.expiresAt ?? now+week,now+week);
+    if(!Number.isFinite(expiresAt) || expiresAt<=now)return;
+    const existing=list().find(item=>item.id===d.id);
+    if(!existing || existing.expiresAt<expiresAt)
+      localStorage.setItem(prefix+d.id,JSON.stringify({...clean(d),expiresAt}));
+  }
+  function toFile(d){return {format:'raceapp-circuit',version:1,circuit:clean(d)};}
+  function fromFile(file){
+    if(file?.format!=='raceapp-circuit'||file.version!==1)fail('Choisis un fichier de circuit Raceapp au format JSON version 1.');
+    return clean(file.circuit);
+  }
+  async function addOfficial(picker,courses) {
+    if(location.protocol==='file:')return;
+    try {
+      const data=await fetch('/api/circuits',{signal:AbortSignal.timeout(5000)}).then(r=>r.json());
+      const group=document.createElement('optgroup');group.label='Circuits officiels';
+      for(const d of data.circuits){
+        if(!d.id.startsWith('officiel-') || Object.hasOwn(courses,d.id))continue;
+        const course=build(d);courses[d.id]=course;group.append(new Option(course.name,d.id));
+      }
+      if(group.children.length)picker.insertBefore(group,picker.querySelector('optgroup'));
+      const requested=new URLSearchParams(location.search).get('circuit');
+      if(picker.value==='r10' && requested?.startsWith('officiel-') && Object.hasOwn(courses,requested)){
+        picker.value=requested;picker.dispatchEvent(new Event('change'));
+      }
+    } catch {}
+  }
+  return {shape,build,list,save,restorePreview,toFile,fromFile,addOfficial,gateView,crossGate,bindTouchPair};
 })();

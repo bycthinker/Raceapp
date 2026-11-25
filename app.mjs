@@ -1,4 +1,7 @@
 import {seasonCourses,fillCoursePicker,courseFor,standings,colors,inside,options} from './game.mjs';
+await RaceProfile.ready;
+const member=RaceProfile.user;
+const identityKey = key => member ? key+':'+member.id : key;
 const byId = id => document.getElementById(id);
 const board = byId('board');
 const entry = byId('entry');
@@ -10,7 +13,16 @@ const roomInput = byId('room-code');
 const trackPicker=byId('track');fillCoursePicker(trackPicker);
 trackPicker.addEventListener('change',()=>render());
 roomInput.value = inviteCode.toUpperCase();
-byId('name').value = localStorage.getItem('cq-name') ?? '';
+byId('name').value = member?.name || localStorage.getItem('cq-name') || '';
+byId('name').readOnly=Boolean(member);
+byId('account-link').href=RaceProfile.accountLink();
+byId('account-link').textContent=member?'Mon compte':'Se connecter ou créer un compte';
+byId('online-profile').textContent=member?'Pilote connecté · '+member.name:'Mode invité · Entre un pseudo et le code du salon.';
+entry.querySelector('[value="create"]').hidden=!member;
+if (!member) {
+  for (const selector of ['#track','#lap-goal','label[for="track"]','label[for="lap-goal"]']) entry.querySelector(selector).hidden=true;
+  roomInput.required=true;
+}
 
 let room = null;
 let token = null;
@@ -42,6 +54,13 @@ async function request(path,body,authorization = token) {
 }
 
 function setRoom(next) {
+  if (next.state==='closed') {
+    room=null; token=null;
+    localStorage.removeItem(identityKey('cq-last'));
+    localStorage.removeItem(identityKey('cq-token-'+next.code));
+    history.replaceState(null,'',location.pathname);
+    render();notice('Le salon a été fermé. Tu peux rejoindre un autre salon.');return;
+  }
   if (room?.code === next.code && room.revision > next.revision) return;
   const justFinished = room?.state === 'racing' && next.state === 'finished';
   if (next.state !== 'finished') stopReplay();
@@ -58,8 +77,8 @@ function setRoom(next) {
 function remember(data) {
   token = data.token;
   const code = data.room.code;
-  localStorage.setItem('cq-last',code);
-  localStorage.setItem('cq-token-'+code,token);
+  localStorage.setItem(identityKey('cq-last'),code);
+  localStorage.setItem(identityKey('cq-token-'+code),token);
   const url = new URL(location.href);
   url.searchParams.set('salle',code);
   history.replaceState(null,'',url);
@@ -671,7 +690,7 @@ function render() {
     const name = document.createElement('span');
     name.textContent = player.name+(player.forfeit?' · Forfait':'');
     const speed = document.createElement('span');
-    speed.textContent = room.state === 'lobby' ? (index === 0 ? 'Hôte' : 'Prêt') :
+    speed.textContent = room.state === 'lobby' ? (index === room.host ? 'Hôte' : player.member?'Pilote':'Invité') :
       'Vitesse '+(player.recovery ? 1 : Math.max(Math.abs(player.vx),Math.abs(player.vy)));
     if (room.lapGoal) speed.textContent = `${player.laps}/${room.lapGoal} tours · ${speed.textContent}`;
     if (rank) {
@@ -709,14 +728,14 @@ function render() {
   };
   if (room.state === 'lobby') {
     status.textContent = room.players.length+' joueur'+(room.players.length === 1 ? '' : 's')+' sur 4';
-    hint.textContent = room.you === 0 ? 'Envoie le lien à tes adversaires. Dès qu’une personne a rejoint, tu peux lancer la course.' : 'En attente du départ.';
-    if (room.you === 0) showButton('Lancer la course','start',room.players.length < 2);
+    hint.textContent = room.you === room.host ? 'Envoie le lien à tes adversaires. Dès qu’une personne a rejoint, tu peux lancer la course.' : 'En attente du départ.';
+    if (room.you === room.host) showButton('Lancer la course','start',room.players.length < 2);
   } else if (room.state === 'finished') {
     const names = room.winners.map(index => room.players[index].name).join(' et ');
     status.textContent = room.winners.length > 1 ? 'Égalité · '+names : names+' remporte la course';
     const distance = Math.round(room.players[room.winners[0]].finish*100)/100;
     hint.textContent = room.byForfeit?'Victoire par forfait.':`Manche ${room.round} · ${distance} ${distance === 1 ? 'case' : 'cases'} après la ligne.`;
-    if (!room.players.some(p=>p.forfeit) && room.you === 0) showButton('Rejouer','restart');
+    if (!room.players.some(p=>p.forfeit) && room.you === room.host) showButton('Rejouer','restart');
   } else {
     status.textContent = 'Au tour de '+active.name;
     const canMove = choices.some(choice => !choice.blocked);
@@ -741,13 +760,13 @@ entry.addEventListener('submit',event => {
   event.preventDefault();
   const name = byId('name').value.trim();
   if (!name) { notice('Entre ton pseudo.'); return; }
-  const joining = event.submitter?.value === 'join';
+  const joining = !member || event.submitter?.value === 'join';
   const code = roomInput.value.trim().toUpperCase();
   if (joining && !/^[A-Z2-9]{6}$/.test(code)) { notice('Entre le code à 6 caractères.'); return; }
   busy(async () => {
-    const key = joining ? localStorage.getItem('cq-token-'+code) : null;
+    const key = joining ? localStorage.getItem(identityKey('cq-token-'+code)) : null;
     const data = await request(joining ? '/'+code+'/join' : '',{name,course:trackPicker.value,design:RaceAtelier.list().find(d=>d.id===trackPicker.value),lapGoal:Number(byId('lap-goal').value)},key);
-    localStorage.setItem('cq-name',name);
+    if(!member)localStorage.setItem('cq-name',name);
     remember(data);
   });
 });
@@ -794,7 +813,7 @@ async function exitRoom(event){
   selected = null;
   camera = null;
   zoom = 0;
-  localStorage.removeItem('cq-last');
+  localStorage.removeItem(identityKey('cq-last'));
   history.replaceState(null,'',location.pathname);
   notice();
   location.href='index.html';
@@ -803,8 +822,8 @@ for(const id of ['leave','forfeit','home'])byId(id).onclick=exitRoom;
 document.querySelector('.mast a').onclick=exitRoom;
 
 render();
-const resumeCode = inviteCode || localStorage.getItem('cq-last');
-const resumeToken = resumeCode && localStorage.getItem('cq-token-'+resumeCode);
+const resumeCode = inviteCode || localStorage.getItem(identityKey('cq-last'));
+const resumeToken = resumeCode && localStorage.getItem(identityKey('cq-token-'+resumeCode));
 if (resumeToken) busy(async () => {
   const data = await request('/'+resumeCode,undefined,resumeToken);
   remember({...data,token:resumeToken});
