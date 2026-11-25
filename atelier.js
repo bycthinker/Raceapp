@@ -128,14 +128,18 @@ for(const [id,apply] of [['width',v=>{
 $('name').oninput=()=>{draft.name=$('name').value;dirty=true};
 function shelf(){const list=lib.list();$('shelf').replaceChildren(...list.map(d=>new Option(d.name,d.id)));$('load').disabled=!list.length}
 function storeDraft(){try{lib.build(draft);lib.save(draft);dirty=false;shelf();$('shelf').value=draft.id;hint('Circuit enregistré sur cet appareil.');return true}catch(e){hint(e.message);return false}}
-$('save').onclick=storeDraft;$('test').onclick=()=>{if(storeDraft())location.href='local.html?mode=solo&circuit='+encodeURIComponent(draft.id)+(location.protocol==='file:'?'#dessin='+encodeURIComponent(JSON.stringify(draft)):'')};
+$('save').onclick=storeDraft;$('test').onclick=()=>{if(storeDraft())location.href='local.html?mode=solo&from=atelier&circuit='+encodeURIComponent(draft.id)+(location.protocol==='file:'?'#dessin='+encodeURIComponent(JSON.stringify(draft)):'')};
 function openDraft(d){if(dirty&&!confirm('Abandonner les modifications non enregistrées ?'))return;draft=d;history=[];selected=segment=-1;dirty=false;mode=d.closed?'edit':'pen';$('name').value=d.name;redraw();hint(d.closed?'Sélectionne un virage à retoucher.':'Maintiens le clic et dessine. Reviens au point de départ pour fermer le circuit.')}
 $('load').onclick=()=>{const d=lib.list().find(v=>v.id===$('shelf').value);if(d)openDraft(d)};
 $('fresh').onclick=()=>openDraft(fresh());
 $('pen').onclick=()=>hint('Maintiens le clic pour tracer la piste.');$('edit').onclick=()=>{mode='edit';redraw();hint('Clique sur un point pour modifier un virage ou entre deux points pour régler la largeur du segment.')};
 $('finish').onclick=()=>{mode='finish';selected=segment=-1;redraw();hint('Clique sur le tracé à l’endroit où placer la ligne de départ et d’arrivée.')};
 $('reverse').onclick=()=>{mark();draft.reverse=!draft.reverse;redraw();hint('Sens de course inversé. La flèche indique la nouvelle direction.')};
-shelf();openDraft(draft);
+shelf();
+const returningId = new URLSearchParams(location.search).get('circuit');
+const returningDraft = returningId && lib.list().find(item => item.id === returningId);
+openDraft(returningDraft || draft);
+if (returningDraft) $('shelf').value = returningId;
 
 // Le premier contact tactile reste réversible jusqu'au relevé du doigt.
 {

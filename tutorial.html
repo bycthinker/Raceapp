@@ -1,4 +1,4 @@
-<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tutoriel · Raceapp</title><link rel="stylesheet" href="/guide.css"><main><a href="/">← Menu principal</a><p id="step"></p><section aria-live="polite"><h1 id="title"></h1><svg viewBox="0 0 320 140" role="img" aria-labelledby="title" id="diagram"></svg><p id="body"></p></section><button id="back">Précédent</button> <button id="next">Suivant</button></main><script>
+<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tutoriel · Raceapp</title><link rel="stylesheet" href="guide.css"><link rel="stylesheet" href="ui.css"><body class="grid-scene"><main><form action="index.html"><button type="submit" class="back-button">Retour</button></form><p id="step"></p><section aria-live="polite"><h1 id="title"></h1><svg viewBox="0 0 320 140" role="img" aria-labelledby="title" id="diagram"></svg><p id="body"></p></section><button id="back">Précédent</button> <button id="next">Suivant</button></main><script>
 const pages=[
 ['Choisis une intersection','Au départ, tu es à l’arrêt. Touche un cercle voisin pour avancer d’une case. La flèche de la piste donne le sens de la course.'],
 ['Prolonge ton mouvement','Imagine que tu répètes ton dernier déplacement. Tu obtiens le point central. Choisis ce centre pour garder ton élan ou un de ses huit voisins pour accélérer, freiner ou tourner. La vitesse maximale est 6.'],
@@ -6,7 +6,7 @@ const pages=[
 ['Prépare le virage','Freine avant de tourner. Pour une sortie, seuls les plus petits chiffres hors piste autorisés restent proposés. Une sortie impose deux coups à vitesse 1, diagonales comprises. Reste à 1 tant que tu es dehors. Tu ne peux pas traverser une autre voiture.'],
 ['Franchis la ligne','Sur le petit ovale, fais un tour complet puis dépasse le damier dans le sens de la flèche. En multijoueur, chacun termine la manche. Le plus loin après la ligne gagne ; à distance égale, les pilotes partagent la victoire.']
 ];
-let i=0;
+let i = location.hash === '#ovale' ? pages.length - 1 : 0;
 function draw(){
  document.querySelector('#step').textContent='Tutoriel · '+(i+1)+' / '+pages.length;
  document.querySelector('#title').textContent=pages[i][0];document.querySelector('#body').textContent=pages[i][1];
@@ -21,5 +21,5 @@ function draw(){
  else{art+='<rect x="126" width="12" y="24" height="96" fill="url(#flag)"/><path d="M210 72H72l14 -10m-14 10 14 10" fill="none" stroke="#b9ee94" stroke-width="4"/>'+dot(72,72,6,'#b9ee94');}
  document.querySelector('#diagram').innerHTML=art;document.querySelector('#back').disabled=!i;document.querySelector('#next').textContent=i===4?'Piloter sur l’ovale':'Suivant';
 }
-document.querySelector('#back').onclick=()=>{if(i)i--;draw()};document.querySelector('#next').onclick=()=>{if(i===4)location.href='/local.html?mode=tuto';else{i++;draw()}};draw();
-</script></html>
+document.querySelector('#back').onclick=()=>{if(i)i--;draw()};document.querySelector('#next').onclick=()=>{if(i===4)location.href='local.html?mode=tuto';else{i++;draw()}};draw();
+</script></body></html>

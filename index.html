@@ -1,9 +1,64 @@
-<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Raceapp</title>
-<style>
-*{box-sizing:border-box}body{margin:0;background:#111815;color:#eeefe5;font-family:Inter,system-ui,sans-serif}main{max-width:1020px;margin:auto;padding:clamp(32px,7vw,92px) clamp(20px,5vw,64px)}h1{font-size:clamp(76px,15vw,160px);letter-spacing:-.095em;line-height:.9;margin:0 0 .38em;font-weight:800}h2{margin:0 0 18px;font-size:18px;font-weight:550}nav{display:grid;grid-template-columns:1fr 1fr;gap:12px}nav a,article{display:flex;flex-direction:column;justify-content:space-between;min-height:146px;padding:24px;border:1px solid #526157;border-radius:16px;background:#202922;color:inherit;text-decoration:none}strong{font-size:clamp(21px,3vw,32px);letter-spacing:-.045em}span{font-size:15px;line-height:1.4;color:#c1cec3}nav a:first-child{background:#c6f58e;color:#17200d;border-color:#c6f58e}nav a:first-child span{color:#314120}a:hover{border-color:#c6f58e}a:focus-visible{outline:3px solid #fff;outline-offset:3px}article{background:transparent;border-style:dashed;color:#aebbb0}footer{margin-top:26px}footer a{color:#d8e4d4;text-underline-offset:4px}@media(max-width:600px){nav{grid-template-columns:1fr}nav a,article{min-height:104px;padding:16px 20px}}
-.extra{display:inline-block;padding:10px 16px;border:1px solid #64796b;border-radius:8px;text-decoration:none;margin:0 6px 6px 0}</style><main><h1>Raceapp</h1><h2>Choisis ton mode de jeu</h2><nav aria-label="Modes de jeu">
-<a href="/online"><strong>Course en direct</strong><span>Crée ou rejoins une salle · 2 à 4 pilotes</span></a>
-<a href="/local.html?mode=solo"><strong>Solo</strong><span>Boucle le circuit en un minimum de manches.</span></a>
-<a href="/local.html?mode=ia"><strong>Contre l’IA</strong><span>Affronte un pilote automatique sur le circuit de ton choix.</span></a>
-<article><strong>Course en différé</strong><span>À venir · Une notification quand c’est à toi de jouer.</span></article>
-</nav><footer><a class="extra" href="/atelier">Créer un circuit</a></footer><footer><a class="extra" href="/tutorial">Tutoriel de pilotage</a> <a class="extra" href="/stats">Mes statistiques</a></footer><footer><a href="/local.html">Jouer à plusieurs sur le même écran</a></footer></main></html>
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101b18">
+  <title>Raceapp · Menu principal</title>
+  <link rel="stylesheet" href="home.css">
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body class="grid-scene">
+  <svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="arrow" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></symbol>
+    <symbol id="timer" viewBox="0 0 24 24"><circle cx="12" cy="14" r="8"/><path d="M9 2h6m-3 0v4m6 1 2-2m-8 9 3-4"/></symbol>
+    <symbol id="chip" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="3"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M9 2v3m6-3v3M9 19v3m6-3v3M2 9h3m-3 6h3m14-6h3m-3 6h3"/></symbol>
+    <symbol id="screen" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M12 17v4m-4 0h8m-4-15v8"/></symbol>
+    <symbol id="clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></symbol>
+    <symbol id="pencil" viewBox="0 0 24 24"><path d="m4 15 12-12a2 2 0 0 1 3 0l2 2a2 2 0 0 1 0 3L9 20l-7 2 2-7Zm10-10 5 5M4 15l5 5"/></symbol>
+    <symbol id="book" viewBox="0 0 24 24"><path d="M12 6c-3-2-6-3-10-2v14c4-1 7 0 10 2 3-2 6-3 10-2V4c-4-1-7 0-10 2Zm0 0v14"/></symbol>
+    <symbol id="chart" viewBox="0 0 24 24"><path d="M3 3v18h18M7 16v-4m5 4V6m5 10V9"/></symbol>
+  </svg>
+  <div class="page">
+    <header class="brandbar">
+      <div class="brand"><span class="flag" aria-hidden="true"></span>Raceapp</div>
+      <span class="tagline">Course sur quadrillage</span>
+      <data id="version" value="0.1.0">v0.1</data>
+    </header>
+    <main>
+      <h1 id="play-title">Jouer</h1>
+      <nav class="races" aria-labelledby="play-title">
+        <a class="card feature" href="online.html">
+          <figure><img src="mainland.svg" alt=""><figcaption>Mainland</figcaption></figure>
+          <span class="feature-copy"><strong>Course en direct</strong><span class="meta">2 à 4 pilotes en ligne</span><svg class="icon arrow" aria-hidden="true"><use href="#arrow"/></svg></span>
+        </a>
+        <a class="card" href="local.html?mode=solo">
+          <svg class="icon" aria-hidden="true"><use href="#timer"/></svg>
+          <span><strong>Solo</strong><span class="meta">Un seul pilote</span></span>
+          <svg class="icon arrow" aria-hidden="true"><use href="#arrow"/></svg>
+        </a>
+        <a class="card" href="local.html?mode=ia">
+          <svg class="icon" aria-hidden="true"><use href="#chip"/></svg>
+          <span><strong>Contre l’IA</strong><span class="meta">Un adversaire virtuel</span></span>
+          <svg class="icon arrow" aria-hidden="true"><use href="#arrow"/></svg>
+        </a>
+        <a class="card" href="local.html">
+          <svg class="icon" aria-hidden="true"><use href="#screen"/></svg>
+          <span><strong>Sur le même écran</strong><span class="meta">2 à 4 pilotes en local</span></span>
+          <svg class="icon arrow" aria-hidden="true"><use href="#arrow"/></svg>
+        </a>
+        <div class="card planned">
+          <svg class="icon" aria-hidden="true"><use href="#clock"/></svg>
+          <span><strong>Course en différé</strong><span class="meta">À venir au lancement</span></span>
+        </div>
+      </nav>
+      <h2 id="extra-title">Hors course</h2>
+      <nav class="tools" aria-labelledby="extra-title">
+        <a class="card" href="atelier.html"><svg class="icon" aria-hidden="true"><use href="#pencil"/></svg><strong>Créer un circuit</strong><svg class="icon arrow" aria-hidden="true"><use href="#arrow"/></svg></a>
+        <a class="card" href="tutorial.html"><svg class="icon" aria-hidden="true"><use href="#book"/></svg><strong>Tutoriel de pilotage</strong><svg class="icon arrow" aria-hidden="true"><use href="#arrow"/></svg></a>
+        <a class="card" href="stats.html"><svg class="icon" aria-hidden="true"><use href="#chart"/></svg><strong>Mes statistiques</strong><svg class="icon arrow" aria-hidden="true"><use href="#arrow"/></svg></a>
+      </nav>
+    </main>
+  </div>
+</body>
+</html>

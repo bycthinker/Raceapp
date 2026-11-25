@@ -117,12 +117,15 @@ select{font:inherit;min-height:42px;border:1px solid var(--edge);border-radius:1
 .shell.playing #board > *{pointer-events:none}.shell.playing #board > .choice{pointer-events:auto}.shell.playing #board{touch-action:none;user-select:none;-webkit-user-select:none}
 .shell:not(.playing) .circuit svg[data-overview="true"]{height:auto;min-height:0;max-height:none;aspect-ratio:63.2/55.2}
 .shell #replay-board{aspect-ratio:63.2/55.2}
-</style><style>.race-nav{display:flex;align-items:center;gap:14px;max-width:1100px;margin:auto;padding:6px 16px}.race-nav a{color:#bde4cc}.race-nav button{width:auto;min-height:36px;padding:5px 12px}</style><script src="/stats.js"></script></head>
-<body>
-  <nav class="race-nav" aria-label="Navigation"><a href="/" id="home">Menu principal</a><button id="forfeit" type="button" hidden>Déclarer forfait</button></nav><main class="shell">
+</style><style>.race-nav{display:flex;align-items:center;gap:14px;max-width:1100px;margin:auto;padding:6px 16px}.race-nav #forfeit{width:auto;min-height:36px;padding:5px 12px}</style><script src="/stats.js"></script><link rel="stylesheet" href="ui.css"><style>
+.local-choice{display:flex;align-items:center;justify-content:center;min-height:44px;padding:7px 13px;border:1px solid #678075;border-radius:10px;background:#203029;color:var(--paper);font-weight:650;text-decoration:none}
+.local-choice:focus-visible{outline:2px solid var(--yellow);outline-offset:3px}
+</style></head>
+<body class="grid-scene">
+  <nav class="race-nav" aria-label="Navigation"><button type="button" class="back-button" id="home">Retour</button><button id="forfeit" type="button" hidden>Déclarer forfait</button></nav><main class="shell">
     <header class="mast">
       
-      <div><h1><a style="color:inherit;text-decoration:none" href="/" aria-label="Raceapp · Accueil">Raceapp</a></h1><p>Course en ligne · 2 à 4 joueurs</p></div>
+      <div><h1><a style="color:inherit;text-decoration:none" href="index.html" aria-label="Raceapp · Accueil">Raceapp</a></h1><p>Course en ligne · 2 à 4 joueurs</p></div>
     </header>
     <div class="layout">
       <section class="circuit" aria-labelledby="circuit-title">
@@ -135,7 +138,7 @@ select{font:inherit;min-height:42px;border:1px solid var(--edge);border-radius:1
           <div id="race-map"></div>
         </div>
         <header>
-          <h2 id="circuit-title">Spa</h2>
+          <h2 id="circuit-title">Mainland</h2>
           <div class="zoom-controls" id="zoom-controls" role="group" aria-label="Zoom de la piste" hidden>
             <button class="secondary" id="zoom-out" type="button" aria-label="Dézoomer">−</button>
             <button class="secondary" id="zoom-in" type="button" aria-label="Zoomer">+</button>
@@ -155,7 +158,7 @@ select{font:inherit;min-height:42px;border:1px solid var(--edge);border-radius:1
             <option>1</option><option>2</option>
           </select>
           <label class="confirmation-setting"><input id="double-confirm" type="checkbox" checked> Valider par double pression</label>
-          <button type="submit" value="create">Créer une salle</button><button type="submit" value="join" class="secondary">Rejoindre la salle</button><p>2 à 4 joueurs · 15 secondes par déplacement</p><a href="/local.html">Jouer sur le même écran</a>
+          <button type="submit" value="create">Créer une salle</button><button type="submit" value="join" class="secondary">Rejoindre la salle</button><p>2 à 4 joueurs · 15 secondes par déplacement</p><a class="local-choice" href="local.html?from=online">Jouer sur le même écran</a>
         </form>
         <div id="game" hidden>
           <section id="lobby-heading"><h2>Salle <span id="display-code"></span></h2><button id="invite">Copier le lien d’invitation</button></section><h2>Positions et vitesses</h2>
@@ -175,7 +178,7 @@ select{font:inherit;min-height:42px;border:1px solid var(--edge);border-radius:1
             <button type="button" class="secondary" id="replay-toggle">Voir le replay</button>
             <button type="button" class="secondary" id="replay-pause" hidden>Pause</button>
           </div>
-          <button class="secondary exit" type="button" id="leave">Retour aux joueurs</button>
+          <button class="secondary exit back-button" type="button" id="leave">Retour au menu</button>
         </div>
         <p id="message" role="status" hidden></p>
       </section>

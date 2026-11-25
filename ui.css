@@ -1,0 +1,48 @@
+/* Le décor bouge indépendamment de la piste et des zones tactiles. */
+body.grid-scene {
+  --grid-color: rgb(166 200 177 / .10);
+  isolation: isolate;
+  background-color: #101b18;
+}
+.grid-scene::before {
+  content: "";
+  position: fixed;
+  inset: -32px 0 0 -32px;
+  z-index: -1;
+  pointer-events: none;
+  background-image: linear-gradient(90deg, var(--grid-color) 1px, transparent 1px),
+                    linear-gradient(var(--grid-color) 1px, transparent 1px);
+  background-size: 32px 32px;
+  animation: move-grid 18s linear infinite;
+}
+@keyframes move-grid {
+  to { transform: translate(32px, 32px); }
+}
+button.back-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .65rem;
+  min-height: 44px;
+  padding: 8px 16px;
+  flex: none;
+  border: 1px solid #678075;
+  border-radius: 100px;
+  background: #203029;
+  color: #f2f5ea;
+  font: 650 15px/1.2 system-ui, sans-serif;
+  cursor: pointer;
+}
+.back-button::before {
+  content: "";
+  width: 14px;
+  height: 12px;
+  background: currentColor;
+  clip-path: polygon(0 50%, 45% 0, 54% 14%, 29% 42%, 100% 42%, 100% 58%, 29% 58%, 54% 86%, 45% 100%);
+}
+button.back-button:hover { background: #304639; border-color: #beec89; }
+button.back-button:focus-visible { outline: 3px solid #d3f797; outline-offset: 3px; }
+button.back-button:active { transform: translateY(1px); }
+@media (prefers-reduced-motion: reduce) {
+  .grid-scene::before { animation: none; }
+}

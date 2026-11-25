@@ -1,13 +1,19 @@
 # Raceapp · Course sur Quadrillage
 
-Jeu de course sur quadrillage pour 2 à 4 joueurs. Le menu Raceapp propose la course en direct, le solo et une course contre une IA locale sur le circuit choisi. En direct, créez ou rejoignez une salle. Le lien « Jouer sur le même écran » ouvre la version locale.
+Jeu de course sur quadrillage pour 2 à 4 joueurs. Le menu Raceapp propose la course en direct, le solo et une course contre une IA locale sur le circuit choisi. En direct, créez ou rejoignez une salle. Le bouton « Sur le même écran » lance une partie locale.
+
+## Versions
+
+La première version publique de test est **0.1**. Chaque livraison de nouveautés fait avancer le numéro (0.2, 0.3…). La version 1.0 correspondra au lancement avec le mode différé.
+
+Le numéro de référence se trouve dans `package.json`. Pour préparer la prochaine version de test, exécuter `npm --no-git-tag-version version minor` depuis le dossier du jeu. La commande met aussi à jour le numéro affiché sur le menu. Exécuter ensuite `npm run archive` pour créer automatiquement le ZIP correspondant, par exemple `Raceapp-0.2.zip`.
 
 ## Mettre les fichiers sur GitHub depuis Windows
 
 1. Extraire le ZIP dans un dossier.
 2. Ouvrir le dépôt Raceapp sur github.com. Dans l’onglet Code, choisir Add file → Upload files (ou uploading an existing file dans un dépôt vide).
 3. Glisser ensemble tous les fichiers extraits directement à la racine du dépôt. Vérifier que package.json et server.mjs apparaissent à la racine du dépôt.
-4. Inclure aussi tutorial.html, stats.html, stats.js et guide.css. Cliquer sur Commit changes sur la branche principale.
+4. Inclure les feuilles de style, mainland.svg et le dossier scripts. Cliquer sur Commit changes sur la branche principale.
 
 ## Héberger le jeu sur Render
 
@@ -37,7 +43,7 @@ Avec Node.js 24, ouvrir un terminal dans le dossier qui contient package.json et
 
 Le tutoriel en cinq étapes débouche sur un tour du petit ovale. Les statistiques par pseudo et mode sont stockées dans le navigateur. Forfait retire la voiture des collisions et passe la main aux pilotes encore engagés.
 
-Spa est le seul circuit fourni dans le menu de course. Le petit ovale est accessible depuis le tutoriel.
+Mainland est le seul circuit fourni dans le menu de course. Le petit ovale est accessible depuis le tutoriel.
 
 ## Atelier de circuits
 

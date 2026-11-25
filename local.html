@@ -117,7 +117,7 @@ select{font:inherit;min-height:42px;border:1px solid var(--edge);border-radius:1
 .shell.playing #board > *{pointer-events:none}.shell.playing #board > .choice{pointer-events:auto}.shell.playing #board{touch-action:none;user-select:none;-webkit-user-select:none}
 .shell:not(.playing) .circuit svg[data-overview="true"]{height:auto;min-height:0;max-height:none;aspect-ratio:63.2/55.2}
 .shell #replay-board{aspect-ratio:63.2/55.2}
-</style><style>.race-nav{display:flex;align-items:center;gap:14px;max-width:1100px;margin:auto;padding:6px 16px}.race-nav a{color:#bde4cc}.race-nav button{width:auto;min-height:36px;padding:5px 12px}</style><script src="atelier-core.js"></script><script>// Une entrée par course et par siège. Actualiser l'écran conserve le même résultat.
+</style><style>.race-nav{display:flex;align-items:center;gap:14px;max-width:1100px;margin:auto;padding:6px 16px}.race-nav #forfeit{width:auto;min-height:36px;padding:5px 12px}</style><script src="atelier-core.js"></script><script>// Une entrée par course et par siège. Actualiser l'écran conserve le même résultat.
 function recordRace(room, label, indexes){
   if(!room || room.state==='lobby' || !room.raceId || label==='Tutoriel')return;
   for(const i of indexes){
@@ -146,12 +146,12 @@ function renderStats(){
   document.querySelector('#empty').hidden=rows.size>0;
 }
 document.addEventListener('DOMContentLoaded',renderStats);
-</script></head>
-<body>
-  <nav class="race-nav" aria-label="Navigation"><a href="/" id="home">Menu principal</a><button id="forfeit" type="button" hidden>Déclarer forfait</button></nav><main class="shell">
+</script><link rel="stylesheet" href="ui.css"></head>
+<body class="grid-scene">
+  <nav class="race-nav" aria-label="Navigation"><button type="button" class="back-button" id="home">Retour</button><button id="forfeit" type="button" hidden>Déclarer forfait</button></nav><main class="shell">
     <header class="mast">
       
-      <div><h1><a style="color:inherit;text-decoration:none" href="/" aria-label="Raceapp · Accueil">Raceapp</a></h1><p>Démo locale · 2 à 4 joueurs</p></div>
+      <div><h1><a style="color:inherit;text-decoration:none" href="index.html" aria-label="Raceapp · Accueil">Raceapp</a></h1><p>Démo locale · 2 à 4 joueurs</p></div>
     </header>
     <div class="layout">
       <section class="circuit" aria-labelledby="circuit-title">
@@ -164,7 +164,7 @@ document.addEventListener('DOMContentLoaded',renderStats);
           <div id="race-map"></div>
         </div>
         <header>
-          <h2 id="circuit-title">Spa</h2>
+          <h2 id="circuit-title">Mainland</h2>
           <div class="zoom-controls" id="zoom-controls" role="group" aria-label="Zoom de la piste" hidden>
             <button class="secondary" id="zoom-out" type="button" aria-label="Dézoomer">−</button>
             <button class="secondary" id="zoom-in" type="button" aria-label="Zoomer">+</button>
@@ -211,7 +211,7 @@ document.addEventListener('DOMContentLoaded',renderStats);
             <button type="button" class="secondary" id="replay-toggle">Voir le replay</button>
             <button type="button" class="secondary" id="replay-pause" hidden>Pause</button>
           </div>
-          <button class="secondary exit" type="button" id="leave">Retour aux joueurs</button>
+          <button class="secondary exit back-button" type="button" id="leave">Retour au menu</button>
         </div>
         <p id="message" role="status" hidden></p>
       </section>
@@ -289,6 +289,7 @@ function spaEdges() {
 }
 const spaLine={axis:'x',at:13,min:39.9,max:44.1,direction:-1};
 const spaCourse={
+  name:"Mainland",
   width:62,height:54,boundaries:spaEdges(),start:spaLine,finish:spaLine,
   lapMarkers:[[14,46],[27,19],[47,11]],
   grid:[[13,40],[13,41],[13,42],[13,43]],
@@ -318,7 +319,7 @@ const ovalCourse = {
 };
 
 const seasonDefinitions = [
-  {id:"r10", name:"Spa", scale:0.61,
+  {id:"r10", name:"Mainland", scale:0.61,
    points:[[13,42],[7,42],[5,40],[6,37],[14,34],[18,30],[23,30],[25,26],[37,20],[41,19],[43,15],[48,15],[52,12],[54,7],[51,5],[46,7],[40,10],[37,8],[32,9],[26,14],[18,16],[15,20],[17,23],[13,26],[10,25],[7,26],[3,30],[1,36],[2,43],[5,48],[10,50],[20,50],[25,47],[25,42],[22,39],[19,39],[18,42]]}
 ];
 function buildSeasonCourse(definition){
@@ -620,7 +621,8 @@ const pending = false;
 let primaryAction = null;
 const names = ['Brice','Papa','Joueur 3','Joueur 4'];
 
-const mode = new URLSearchParams(location.search).get('mode');
+const launch = new URLSearchParams(location.search);
+const mode = launch.get('mode');
 const tutorial=mode==='tuto';
 const solo = tutorial||mode==='solo', ai = mode==='ia';
 if(solo || ai){
@@ -956,7 +958,7 @@ function drawSurface(course, target = board) {
 function draw(active, choices) {
   board.replaceChildren();
   const course=room?courseFor(room):seasonCourses[trackPicker.value];
-  byId('circuit-title').textContent=course.name??(tutorial?'Petit ovale':'Spa');
+  byId('circuit-title').textContent=course.name??(tutorial?'Petit ovale':'Mainland');
   const {width,height,start,finish,grid:startingPositions} = course;
   if (zoom && active) {
     const [zoomWidth,zoomHeight] = pinchSize ?? zoomSizes[zoom];
@@ -1416,7 +1418,15 @@ function exitLocal(e){e.preventDefault();
     if(!confirm(solo?'Quitter cette course ?':'Quitter la partie sur cet écran et enregistrer le forfait ?'))return;
     if(!solo){forfeitRace(room,ai?0:room.turn);render();}
   }
-  location.href='/';
+  if (e.currentTarget === byId('home')) {
+    if (tutorial) { location.href = 'tutorial.html#ovale'; return; }
+    if (launch.get('from') === 'atelier') {
+      location.href = 'atelier.html?circuit=' + encodeURIComponent(launch.get('circuit') || '');
+      return;
+    }
+    if (launch.get('from') === 'online') { location.href = 'online.html'; return; }
+  }
+  location.href = 'index.html';
 }
 byId('home').onclick=exitLocal;document.querySelector('.mast a').onclick=exitLocal;
 byId('leave').onclick=exitLocal;

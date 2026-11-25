@@ -71,6 +71,7 @@ function spaEdges() {
 }
 const spaLine={axis:'x',at:13,min:39.9,max:44.1,direction:-1};
 const spaCourse={
+  name:"Mainland",
   width:62,height:54,boundaries:spaEdges(),start:spaLine,finish:spaLine,
   lapMarkers:[[14,46],[27,19],[47,11]],
   grid:[[13,40],[13,41],[13,42],[13,43]],
@@ -82,7 +83,7 @@ const spaCourse={
   kerbs:[[[12,26],[68,85],[111,123],[167,180]],[[23,35],[82,95],[133,145],[235,248]]],
 };
 const seasonDefinitions = [
-  {id:"r10", name:"Spa", scale:0.61,
+  {id:"r10", name:"Mainland", scale:0.61,
    points:[[13,42],[7,42],[5,40],[6,37],[14,34],[18,30],[23,30],[25,26],[37,20],[41,19],[43,15],[48,15],[52,12],[54,7],[51,5],[46,7],[40,10],[37,8],[32,9],[26,14],[18,16],[15,20],[17,23],[13,26],[10,25],[7,26],[3,30],[1,36],[2,43],[5,48],[10,50],[20,50],[25,47],[25,42],[22,39],[19,39],[18,42]]}
 ];
 function buildSeasonCourse(definition){

@@ -322,7 +322,7 @@ function drawSurface(course, target = board) {
 function draw(active, choices) {
   board.replaceChildren();
   const course=room?courseFor(room):seasonCourses[trackPicker.value];
-  byId('circuit-title').textContent=course.name??('Spa');
+  byId('circuit-title').textContent=course.name ?? 'Mainland';
   const {width,height,start,finish,grid:startingPositions} = course;
   if (zoom && active) {
     const [zoomWidth,zoomHeight] = pinchSize ?? zoomSizes[zoom];
@@ -780,7 +780,7 @@ byId('invite').addEventListener('click',async () => {
 });
 async function exitRoom(event){
   event?.preventDefault();
-  if(!room){location.href='/';return;}
+  if(!room){location.href='index.html';return;}
   if(pending)return;
   if(room.state==='racing' && !confirm('Quitter cette course et déclarer forfait ?'))return;
   if(room.state==='racing'||room.state==='lobby'){
@@ -797,7 +797,7 @@ async function exitRoom(event){
   localStorage.removeItem('cq-last');
   history.replaceState(null,'',location.pathname);
   notice();
-  location.href='/';
+  location.href='index.html';
 }
 for(const id of ['leave','forfeit','home'])byId(id).onclick=exitRoom;
 document.querySelector('.mast a').onclick=exitRoom;

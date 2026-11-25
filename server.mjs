@@ -18,6 +18,9 @@ const files = new Map([
   ['/',['index.html','text/html; charset=utf-8']],
   ['/tutorial',['tutorial.html','text/html; charset=utf-8']],
   ['/stats',['stats.html','text/html; charset=utf-8']],
+  ['/ui.css',['ui.css','text/css']],
+  ['/home.css',['home.css','text/css']],
+  ['/mainland.svg',['mainland.svg','image/svg+xml']],
   ['/guide.css',['guide.css','text/css']],
   ['/stats.js',['stats.js','text/javascript']],
   ['/atelier',['atelier.html','text/html; charset=utf-8']],
@@ -28,6 +31,11 @@ const files = new Map([
   ['/app.mjs',['app.mjs','text/javascript; charset=utf-8']],
   ['/game.mjs',['game.mjs','text/javascript; charset=utf-8']],
 ]);
+
+// Les liens du menu fonctionnent aussi avec les noms de fichiers du ZIP.
+for (const [filename, type] of [...files.values()]) {
+  if (filename.endsWith('.html')) files.set('/'+filename,[filename,type]);
+}
 
 createServer(async (incoming,outgoing) => {
   try {
