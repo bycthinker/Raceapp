@@ -47,7 +47,7 @@ function setRoom(next) {
   if (next.state !== 'finished') stopReplay();
   if (room?.revision !== next.revision) selected = null;
   if (room?.state !== next.state || room?.turn !== next.turn || room?.round !== next.round) camera = null;
-  if (room?.state !== 'racing' && next.state === 'racing') zoom = matchMedia('(max-width: 680px)').matches ? 3 : 0;
+  if (room?.state !== 'racing' && next.state === 'racing') {pinchSize=null;zoom=matchMedia('(max-width: 680px)').matches ? 3 : 0;}
   room = next;
   lastChoicePress = null;
   room.doubleConfirm = byId('double-confirm').checked;
@@ -113,11 +113,13 @@ function svg(tag, attrs, parent = board) {
 
 const zoomSizes = [null,[30,24],[20,18],[14,16],[10,10]];
 let camera = null;
+let pinchSize = null;
 
 function bindZoom() {
   let previous = 3;
   function changeZoom(level) {
     if (zoom > 0) previous = zoom;
+    pinchSize = null;
     zoom = level;
     render();
   }
@@ -161,17 +163,80 @@ function bindPan() {
   let suppressClick = false;
   const canPan = () => zoom && room?.state === 'racing';
 
+  const touches = new Map();
+  let navigating = false;
+  let pinch = null;
+
+  function pair() {
+    const [a,b] = touches.values();
+    return {x:(a.x+b.x)/2,y:(a.y+b.y)/2,distance:Math.max(1,Math.hypot(a.x-b.x,a.y-b.y))};
+  }
+  function anchor(center=pair()) {
+    const matrix = board.getScreenCTM();
+    if (!matrix) return;
+    pinch = {race:room.raceId,center:new DOMPoint(center.x,center.y).matrixTransform(matrix.inverse()),
+      distance:center.distance,scale:matrix.a};
+  }
+  function navigate(center=pair()) {
+    if (!pinch || room?.state !== 'racing' || room.raceId !== pinch.race) return;
+    const rect = board.getBoundingClientRect();
+    const course = courseFor(room), field = fieldBounds(course);
+    const fit = Math.min(rect.width/field.width,rect.height/field.height);
+    const limit = Math.max(fit,Math.min(rect.width,rect.height)/8);
+    const scale = Math.max(fit,Math.min(limit,pinch.scale*center.distance/pinch.distance));
+    const width = Math.min(field.width,rect.width/scale), height = Math.min(field.height,rect.height/scale);
+    const target = {x:pinch.center.x+(rect.left+rect.width/2-center.x)/scale,
+      y:pinch.center.y+(rect.top+rect.height/2-center.y)/scale};
+    pinchSize = [width,height];
+    // Les boutons reprennent au palier le plus proche du zoom libre.
+    zoom = 0;
+    if (scale > fit*1.00001) {
+      zoom = 1;
+      const error = i => Math.abs(Math.log(Math.min(rect.width/zoomSizes[i][0],rect.height/zoomSizes[i][1])/scale));
+      for (let i=2;i<zoomSizes.length;i++) if (error(i)<error(zoom)) zoom=i;
+    }
+    camera = setViewport(course,width,height,target);
+    if (!zoom) {camera=null;pinchSize=null;}
+    board.setAttribute('data-overview',String(!zoom));
+    byId('zoom-in').disabled = zoom===zoomSizes.length-1;
+    byId('zoom-out').disabled = !zoom;
+    byId('toggle-zoom').textContent = zoom?'Vue entière':'Recentrer';
+    byId('recenter-board').hidden = !zoom;
+  }
+
+  const nativeNavigation=RaceAtelier.bindTouchPair(board,()=>room?.state==='racing',
+    center=>{gesture=lastChoicePress=null;suppressClick=true;anchor(center)},
+    navigate,()=>{pinch=null;touches.clear();navigating=false;board.removeAttribute('data-dragging')});
   function pan(dx,dy) {
     const {x,y,width,height} = board.viewBox.baseVal;
     camera = setViewport(courseFor(room),width,height,{x:x+width/2+dx,y:y+height/2+dy});
     byId('recenter-board').hidden = false;
   }
   board.addEventListener('pointerdown',event => {
-    if (event.button !== 0 || !event.isPrimary) return;
+    if (room?.state !== 'racing' || event.button !== 0) return;
+    if(nativeNavigation())return;
+    if (event.pointerType === 'touch' && !('ontouchstart' in window)) {
+      touches.set(event.pointerId,{x:event.clientX,y:event.clientY});
+      if (touches.size >= 2) {
+        navigating = suppressClick = true;
+        gesture = lastChoicePress = null;
+        for (const id of touches.keys()) board.setPointerCapture(id);
+        board.setAttribute('data-dragging','');
+        anchor();
+        return;
+      }
+      if (navigating) return;
+    }
+    if (!event.isPrimary || navigating) return;
     suppressClick = false;
     if (canPan()) gesture = {id:event.pointerId,x:event.clientX,y:event.clientY,dragging:false};
   });
   board.addEventListener('pointermove',event => {
+    if(nativeNavigation())return;
+    if (touches.has(event.pointerId)) {
+      touches.set(event.pointerId,{x:event.clientX,y:event.clientY});
+      if (navigating) {if (touches.size>=2) navigate(); return;}
+    }
     if (gesture?.id !== event.pointerId || !canPan()) return;
     const dx = event.clientX-gesture.x;
     const dy = event.clientY-gesture.y;
@@ -190,6 +255,12 @@ function bindPan() {
     gesture.y = event.clientY;
   });
   function end(event) {
+    if (event.type==='lostpointercapture' && event.target!==board && board.hasPointerCapture(event.pointerId)) return;
+    if (touches.delete(event.pointerId) && navigating) {
+      if (touches.size>=2) anchor();
+      if (!touches.size) {navigating=false;pinch=null;board.removeAttribute('data-dragging');}
+      return;
+    }
     if (gesture?.id !== event.pointerId) return;
     gesture = null;
     board.removeAttribute('data-dragging');
@@ -197,7 +268,7 @@ function bindPan() {
   for (const type of ['pointerup','pointercancel','lostpointercapture']) board.addEventListener(type,end);
   board.addEventListener('click',event => {
     if (!suppressClick) return;
-    suppressClick = false;
+    event.preventDefault();
     event.stopPropagation();
   },true);
   board.addEventListener('keydown',event => {
@@ -254,9 +325,9 @@ function draw(active, choices) {
   byId('circuit-title').textContent=course.name??('Spa');
   const {width,height,start,finish,grid:startingPositions} = course;
   if (zoom && active) {
-    const [zoomWidth,zoomHeight] = zoomSizes[zoom];
-    const viewWidth = Math.min(width+1.2,zoomWidth);
-    const viewHeight = Math.min(height+1.2,zoomHeight);
+    const [zoomWidth,zoomHeight] = pinchSize ?? zoomSizes[zoom];
+    const viewWidth = pinchSize ? zoomWidth : Math.min(width+1.2,zoomWidth);
+    const viewHeight = pinchSize ? zoomHeight : Math.min(height+1.2,zoomHeight);
     const recovering = active.recovery || !inside(active.x,active.y,course);
     const center = {x:active.x+(recovering ? 0 : active.vx/2),y:active.y+(recovering ? 0 : active.vy/2)};
     setViewport(course,viewWidth,viewHeight,camera ?? center);
@@ -267,19 +338,14 @@ function draw(active, choices) {
   drawSurface(course);
   const gates = start === finish ? [[finish,'#f5bf63']] : [[start,'#a6f2d7'],[finish,'#f5bf63']];
   for (const [line,color] of gates) {
-    const endpoints = line.axis === 'x' ? {x1:line.at,x2:line.at,y1:line.min,y2:line.max} :
-      {x1:line.min,x2:line.max,y1:line.at,y2:line.at};
+    const view=RaceAtelier.gateView(line),endpoints=view.stripe();
     if (start === finish) {
       svg('line',{...endpoints,stroke:'#121a1e','stroke-width':.54});
       for (const side of [-1,1]) {
-        const offset = line.at+side*.13;
-        const stripe = line.axis === 'x' ? {x1:offset,x2:offset} : {y1:offset,y2:offset};
-        svg('line',{...endpoints,...stripe,stroke:'#f2eee2','stroke-width':.26,
+        svg('line',{...view.stripe(side*.13),stroke:'#f2eee2','stroke-width':.26,
           'stroke-dasharray':'.26 .26','stroke-dashoffset':side < 0 ? 0 : .26});
       }
-      const middle=(line.min+line.max)/2;
-      const translate=line.axis==='x'?[line.at,middle]:[middle,line.at];
-      const angle=(line.axis==='x'?0:90)+(line.direction===1?0:180);
+      const translate=view.mid,angle=view.angle;
       svg('path',{d:'M .7 0 H 2.7 m -.65 -.5 .65 .5 -.65 .5',transform:`translate(${translate.join(' ')}) rotate(${angle})`,
         fill:'none',stroke:color,'stroke-width':.24,'stroke-linecap':'round','stroke-linejoin':'round'});
     } else {
@@ -497,8 +563,7 @@ function startReplay() {
   scene.replaceChildren();
   fullView(scene,fieldBounds(courseFor(room)));
   drawSurface(courseFor(room),scene);
-  const finishLine = finish.axis === 'x' ? {x1:finish.at,x2:finish.at,y1:finish.min,y2:finish.max} :
-    {x1:finish.min,x2:finish.max,y1:finish.at,y2:finish.at};
+  const finishLine=RaceAtelier.gateView(finish).stripe();
   svg('line',{...finishLine,stroke:'#f2eee2','stroke-width':.38,'stroke-dasharray':'.30 .23'},scene);
   const players = room.players;
   const cars = players.map((_,index) => drawFormulaCar(scene,colors[index]));
@@ -506,7 +571,7 @@ function startReplay() {
   const moves = Math.max(...paths.map(path => path.moves));
   const duration = Math.max(1400,Math.min(16000,moves*235));
   const start = courseFor(room).start;
-  const headings = players.map(() => (start.axis === 'x' ? 0 : 90) + (start.direction < 0 ? 180 : 0));
+  const headings = players.map(() => RaceAtelier.gateView(start).angle);
   const run = {frame:0,paused:false,last:null,elapsed:0,tick:null};
   replayRun = run;
 
@@ -649,7 +714,7 @@ function render() {
   } else if (room.state === 'finished') {
     const names = room.winners.map(index => room.players[index].name).join(' et ');
     status.textContent = room.winners.length > 1 ? 'Égalité · '+names : names+' remporte la course';
-    const distance = room.players[room.winners[0]].finish;
+    const distance = Math.round(room.players[room.winners[0]].finish*100)/100;
     hint.textContent = room.byForfeit?'Victoire par forfait.':`Manche ${room.round} · ${distance} ${distance === 1 ? 'case' : 'cases'} après la ligne.`;
     if (!room.players.some(p=>p.forfeit) && room.you === 0) showButton('Rejouer','restart');
   } else {

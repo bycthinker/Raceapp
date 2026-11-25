@@ -29,12 +29,12 @@ function redraw(){
         svg('path',{d:path([a,b],false),stroke:'#f4ba65','stroke-width':'.32',fill:'none','stroke-dasharray':'.55 .32'});
       }
       if(finish){
-        const {axis,at,min,max,direction}=finish;
-        const ends=axis==='x'?{x1:at,x2:at,y1:min,y2:max}:{x1:min,x2:max,y1:at,y2:at};
+        const view=lib.gateView(finish),ends=view.stripe();
         svg('line',{...ends,stroke:'#162322','stroke-width':'.6'});
         svg('line',{...ends,stroke:'#f4edd2','stroke-width':'.46','stroke-dasharray':'.42 .28'});
-        const mid=(min+max)/2,translate=axis==='x'?[at,mid]:[mid,at];
-        svg('path',{d:'M .6 0H3 m -.8 -.65 .8 .65 -.8 .65',transform:'translate('+translate.join(' ')+') rotate('+((axis==='x'?0:90)+(direction>0?0:180))+')',stroke:'#ffbd63','stroke-width':'.38',fill:'none'});
+        for(const [cx,cy] of finish.gridPoints)svg('circle',{cx,cy,r:.19,fill:'#fff',stroke:'#193f36','stroke-width':.08});
+        const translate=view.mid;
+        svg('path',{d:'M .6 0H3 m -.8 -.65 .8 .65 -.8 .65',transform:'translate('+translate.join(' ')+') rotate('+view.angle+')',stroke:'#ffbd63','stroke-width':'.38',fill:'none'});
       }
       if(mode==='edit')draft.points.forEach(([cx,cy],i)=>svg('circle',{cx,cy,r:selected===i?.55:.38,fill:selected===i?'#fa9c37':'#f5ffcd',stroke:'#193f36','stroke-width':'.12'}));
     }catch{}
@@ -154,24 +154,26 @@ shelf();openDraft(draft);
     const [a,b]=[...fingers.values()];
     return {x:(a.x+b.x)/2,y:(a.y+b.y)/2,d:Math.max(1,Math.hypot(a.x-b.x,a.y-b.y))};
   }
-  function anchor(){
-    const m=pair(),view=sheet.viewBox.baseVal;
+  function anchor(m=pair()){
+    const view=sheet.viewBox.baseVal;
     const center=new DOMPoint(m.x,m.y).matrixTransform(sheet.getScreenCTM().inverse());
     initial={m,width:view.width,center};
   }
-  function panZoom(){
-    const m=pair(),rect=sheet.getBoundingClientRect();
+  function panZoom(m=pair()){
+    const rect=sheet.getBoundingClientRect();
     const width=Math.min(96,Math.max(8,initial.width*initial.m.d/m.d)),height=width*2/3;
     const x=initial.center.x-(m.x-rect.left)*width/rect.width;
     const y=initial.center.y-(m.y-rect.top)*height/rect.height;
     sheet.setAttribute('viewBox',[Math.max(0,Math.min(96-width,x)),Math.max(0,Math.min(64-height,y)),width,height].join(' '));
   }
+  const nativeNavigation=lib.bindTouchPair(sheet,()=>pen===null,
+    p=>{rollback();anchor({...p,d:p.distance})},p=>panZoom({...p,d:p.distance}),()=>{initial=null;fingers.clear();navigating=false});
   sheet.onpointerdown=e=>{
-    if(e.button!==0)return;
+    if(e.button!==0||nativeNavigation())return;
     if(e.pointerType==='touch'){
-      if(pen!==null)return;
+      if(pen!==null||('ontouchstart' in window && e.isPrimary===false))return;
       fingers.set(e.pointerId,{x:e.clientX,y:e.clientY});sheet.setPointerCapture(e.pointerId);
-      if(fingers.size>=2){rollback();navigating=true;anchor();return}
+      if(!('ontouchstart' in window)&&fingers.size>=2){rollback();navigating=true;anchor();return}
       if(navigating)return;
     }else if(e.pointerType==='pen'){
       rollback();fingers.clear();navigating=false;pen=e.pointerId;
@@ -179,6 +181,7 @@ shelf();openDraft(draft);
     snapshot=remember();owner=e.pointerId;sheet.setPointerCapture(owner);down(e);
   };
   sheet.onpointermove=e=>{
+    if(nativeNavigation())return;
     if(fingers.has(e.pointerId)){
       fingers.set(e.pointerId,{x:e.clientX,y:e.clientY});
       if(navigating){if(fingers.size>=2)panZoom();return}

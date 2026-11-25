@@ -275,6 +275,7 @@ function options(room) {
 }
 
 function crossing(player, move, gate) {
+  if(gate.ends)return RaceAtelier.crossGate(player,move,gate);
   const {axis,at,min,max,direction} = gate;
   const from = (player[axis]-at)*direction;
   const to = (move[axis]-at)*direction;

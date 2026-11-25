@@ -62,6 +62,127 @@ globalThis.RaceAtelier=(()=>{
       return [p[0]-(uy+vy)*factor,p[1]+(ux+vx)*factor];
     }),true);
   }
+  const dot=(a,b)=>a[0]*b[0]+a[1]*b[1];
+  const sub=(a,b)=>[a[0]-b[0],a[1]-b[1]];
+  const along=(p,v,t)=>[p[0]+v[0]*t,p[1]+v[1]*t];
+  function insideRing(ring,p){return intersections(ring,p[0]).filter(y=>y>p[1]).length%2===1}
+  function interiorMarker(hole){
+    // Un intervalle ouvert entre deux intersections est dans l'îlot, même à l'épingle.
+    let best=0,marker;
+    const xs=hole.map(p=>p[0]),left=Math.min(...xs),right=Math.max(...xs);
+    for(let i=0;i<25;i++){
+      const x=left+(i+.5)*(right-left)/25,ys=intersections(hole,x);
+      for(let j=0;j+1<ys.length;j+=2){
+        const span=ys[j+1]-ys[j];if(span>best){best=span;marker=[x,(ys[j]+ys[j+1])/2]}
+      }
+    }
+    if(!marker)fail('Élargis l’espace au centre de la boucle.');
+    return marker;
+  }
+  function bankHits(rings,anchor,tangent,normal){
+    const hits=[];
+    rings.forEach((ring,bank)=>ring.forEach((p,i)=>{
+      const q=ring[(i+1)%ring.length],a=dot(sub(p,anchor),tangent),b=dot(sub(q,anchor),tangent);
+      if((a>0)===(b>0))return;
+      const point=mix(p,q,a/(a-b));
+      hits.push({bank,i,point,t:dot(sub(point,anchor),normal)});
+    }));
+    hits.sort((a,b)=>a.t-b.t);
+    const front=hits.findIndex(h=>h.t>0);
+    return front>0?[hits[front-1],hits[front]]:[];
+  }
+  function alignBank(ring,hit,tangent){
+    // Deux petits raccords encadrent un bord droit exactement orthogonal au damier.
+    let ordered=[hit.point,...ring.slice(hit.i+1),...ring.slice(0,hit.i+1),hit.point];
+    let length=0;const vertices=[];
+    for(let i=1;i<ordered.length;i++){length+=dist(ordered[i-1],ordered[i]);vertices.push({p:ordered[i],s:length})}
+    const trim=.6;
+    const remaining=vertices.filter(v=>v.s>trim && v.s<length-trim).map(v=>v.p);
+    if(remaining.length<2)return ring;
+    const near=ordered.find(p=>dist(p,hit.point)>.001);
+    const sign=dot(sub(near,hit.point),tangent)>=0?1:-1;
+    return [along(hit.point,tangent,.35*sign),...remaining,along(hit.point,tangent,-.35*sign)];
+  }
+  function startSection(r,boundaries,target){
+    const projections=r.map((p,i)=>{
+      const q=r[(i+1)%r.length],v=sub(q,p),length=dist(p,q);
+      const f=target?Math.max(0,Math.min(1,dot(sub(target,p),v)/(length*length))):.5;
+      const center=mix(p,q,f);
+      return {i,center,length,unit:v.map(a=>a/length),score:target?dist(target,center):-length};
+    }).sort((a,b)=>a.score-b.score);
+    if(target && projections[0].score>4.5)fail('Touche la chaussée à l’endroit du départ.');
+    const inside=p=>insideRing(boundaries[0],p)&&!insideRing(boundaries[1],p);
+    for(const part of projections){
+      if(target && part.score>projections[0].score+3)break;
+      const [cx,cy]=part.center,candidates=[];
+      for(let x=Math.round(cx)-2;x<=Math.round(cx)+2;x++)for(let y=Math.round(cy)-2;y<=Math.round(cy)+2;y++){
+        const anchor=[x,y];if(!inside(anchor))continue;
+        for(const [dx,dy] of [[1,0],[0,1],[1,1],[1,-1],[2,1],[2,-1],[1,2],[1,-2],[3,1],[3,-1],[1,3],[1,-3],[3,2],[3,-2],[2,3],[2,-3]]){
+          const step=Math.hypot(dx,dy),normal=[dx/step,dy/step];
+          const error=Math.abs(dot(normal,part.unit));if(error>.44)continue;
+          let tangent=[normal[1],-normal[0]];
+          if(dot(tangent,part.unit)<0)tangent=tangent.map(v=>-v);
+          candidates.push({anchor,normal,tangent,step,score:dist(anchor,part.center)+error*5});
+        }
+      }
+      candidates.sort((a,b)=>a.score-b.score);
+      for(const {anchor,normal,tangent,step} of candidates){
+        const hits=bankHits(boundaries,anchor,tangent,normal);
+        if(hits.length!==2||hits[0].bank===hits[1].bank)continue;
+        if(Math.max(-hits[0].t,hits[1].t)+1e-7<step)continue;
+        const banks=boundaries.slice();
+        for(const h of hits)banks[h.bank]=alignBank(banks[h.bank],h,tangent);
+        const grid=[];
+        for(let x=anchor[0]-7;x<=anchor[0]+7;x++)for(let y=anchor[1]-7;y<=anchor[1]+7;y++){
+          const v=sub([x,y],anchor),depth=-dot(v,tangent),side=dot(v,normal);
+          if(depth<-.000001||depth>4||side<hits[0].t-1e-7||side>hits[1].t+1e-7)continue;
+          if(insideRing(banks[0],[x,y])&&!insideRing(banks[1],[x,y]))grid.push({p:[x,y],depth,side:Math.abs(side)});
+        }
+        grid.sort((a,b)=>Math.round(a.depth*1e6)-Math.round(b.depth*1e6)||a.side-b.side);
+        if(grid.length<4)continue;
+        const gridPoints=[];
+        for(let k=Math.ceil((hits[0].t-1e-7)/step);k<=Math.floor((hits[1].t+1e-7)/step);k++){
+          gridPoints.push(along(anchor,normal,k*step).map(Math.round));
+        }
+        const finish={anchor,forward:tangent,ends:hits.map(h=>h.point),gridPoints};
+        // Partir du croisement réel avec le milieu de la piste.
+        let nearest;
+        r.forEach((p,i)=>{
+          const q=r[(i+1)%r.length],a=dot(sub(p,anchor),tangent),b=dot(sub(q,anchor),tangent);
+          if(a>0||b<=0)return;
+          const point=mix(p,q,a/(a-b)),gap=dist(point,anchor);
+          if(!nearest||gap<nearest.gap)nearest={i,point,gap};
+        });
+        if(!nearest||nearest.gap>4)continue;
+        const nodes=[nearest.point,...r.slice(nearest.i+1),...r.slice(0,nearest.i+1)].map(p=>p.slice(0,2)).filter((p,i,a)=>!i||dist(p,a[i-1])>.02);
+        if(dist(nodes[0],nodes.at(-1))<.02)nodes.pop();
+        return {finish,grid:grid.slice(0,4).map(v=>v.p),nodes,boundaries:banks};
+      }
+    }
+    fail('Écarte légèrement les deux portions de piste près du départ.');
+  }
+  function gateView(gate){
+    let ends=gate.ends,forward=gate.forward;
+    if(!ends){
+      const {axis,at,min,max,direction}=gate;
+      ends=axis==='x'?[[at,min],[at,max]]:[[min,at],[max,at]];
+      forward=axis==='x'?[direction,0]:[0,direction];
+    }
+    const [a,b]=ends;
+    function stripe(offset=0){
+      const [x1,y1]=along(a,forward,offset),[x2,y2]=along(b,forward,offset);
+      return {x1,y1,x2,y2};
+    }
+    return {stripe,mid:mix(a,b,.5),angle:Math.atan2(forward[1],forward[0])*180/Math.PI};
+  }
+  function crossGate(p,m,g){
+    const a=dot(sub([p.x,p.y],g.anchor),g.forward),b=dot(sub([m.x,m.y],g.anchor),g.forward);
+    if(a>1e-8||b<=1e-8)return null;
+    const point=mix([p.x,p.y],[m.x,m.y],Math.max(0,-a)/(b-a));
+    const span=sub(g.ends[1],g.ends[0]),k=dot(sub(point,g.ends[0]),span)/dot(span,span);
+    return k>=-1e-8&&k<=1+1e-8?{point,distance:Math.round(b*1e8)/1e8}:null;
+  }
+
   function build(d,preview=false){
     if(typeof d?.name!=='string'||!d.name.trim()||d.name.length>40)fail('Donne un nom au circuit (40 caractères maximum).');
     const r=stripLoops(d.reverse?shape(d).reverse():shape(d),false);
@@ -69,53 +190,48 @@ globalThis.RaceAtelier=(()=>{
     const boundaries=[offset(r,1),offset(r,-1)].sort((a,b)=>Math.abs(area(b))-Math.abs(area(a)));
     const [outer,hole]=boundaries;
     for(let i=0;i<outer.length;i++)for(let j=0;j<hole.length;j++)if(crossing(outer[i],outer[(i+1)%outer.length],hole[j],hole[(j+1)%hole.length]))fail('Deux bords se touchent. Écarte les virages ou affine le trait.');
-    const contains=(ring,x,y)=>intersections(ring,x).filter(h=>h>y).length%2===1;
-    const onTrack=(x,y)=>contains(outer,x,y)&&!contains(hole,x,y);
-    const segments=r.map((p,i)=>({p,q:r[(i+1)%r.length],i}));
     if(d.finishPoint && (!Array.isArray(d.finishPoint)||d.finishPoint.length!==2||d.finishPoint.some(v=>!Number.isFinite(v))))fail('Position de la ligne invalide.');
-    function proximity({p,q}){
-      const [x,y]=d.finishPoint;
-      const dx=q[0]-p[0],dy=q[1]-p[1];
-      const t=Math.max(0,Math.min(1,((x-p[0])*dx+(y-p[1])*dy)/(dx*dx+dy*dy)));
-      return dist([x,y],mix(p,q,t));
-    }
-    if(d.finishPoint)segments.sort((a,b)=>proximity(a)-proximity(b));
-    else segments.sort((a,b)=>dist(b.p,b.q)-dist(a.p,a.q));
-    const preferred=d.finishPoint?proximity(segments[0]):null;
-    if(preferred!==null && preferred>4){if(preview)return {boundaries};fail("Clique directement sur la piste pour placer la ligne.")}
-    for(const {p,q,i} of segments){
-      if(preferred!==null && proximity({p,q})>preferred+2)break;
-      const axis=Math.abs(q[0]-p[0])>=Math.abs(q[1]-p[1])?'x':'y';
-      const a=axis==='x'?0:1,b=1-a;
-      const target=d.finishPoint?.[a]??(p[a]+q[a])/2;
-      const at=Math.max(Math.ceil(Math.min(p[a],q[a])),Math.min(Math.floor(Math.max(p[a],q[a])),Math.round(target)));
-      if(at<Math.min(p[a],q[a])||at>Math.max(p[a],q[a])||p[a]===q[a])continue;
-      const across=p[b]+(q[b]-p[b])*(at-p[a])/(q[a]-p[a]);
-      const oriented=ring=>a?ring.map(([x,y])=>[y,x]):ring;
-      const cuts=boundaries.flatMap(r=>intersections(oriented(r),at)).sort((a,b)=>a-b);
-      const h=cuts.findIndex(k=>k>across);if(h<1||h%2===0)continue;
-      const min=cuts[h-1],max=cuts[h],grid=[],direction=Math.sign(q[a]-p[a]);
-      const xy=(along,other)=>a?[other,along]:[along,other];
-      for(let row=0;row<=3&&grid.length<4;row++){
-        for(let col=Math.ceil(min);col<=Math.floor(max)&&grid.length<4;col++){
-          const cell=xy(at-row*direction,col);
-          const front=xy(at-(row-1)*direction,col);
-          if(onTrack(...cell)&&onTrack(...front))grid.push(cell);
+    let section;
+    try{section=startSection(r,boundaries,d.finishPoint)}catch(e){if(preview)return {boundaries};throw e}
+    const {finish,nodes}=section;
+    return {...section,id:d.id,name:d.name.trim(),start:finish,width:Math.ceil(Math.max(...outer.map(p=>p[0])))+2,height:Math.ceil(Math.max(...outer.map(p=>p[1])))+2,checkpoints:[],sectors:[[...nodes,nodes[0]]],kerbs:[[],[]],lapMarkers:[interiorMarker(hole)],winding:Math.sign(area(r))};
+  }
+  // Sur iPad les contacts natifs restent associés au document, même quand la
+  // grille SVG remplace ses éléments ou que Safari annule un PointerEvent.
+  function bindTouchPair(surface,enabled,begin,move,finish){
+    const ids=new Set();
+    let active=false,signature='';
+    function handle(event){
+      if(event.type==='touchstart' && enabled()){
+        const box=surface.getBoundingClientRect();
+        for(const t of event.changedTouches){
+          if(surface.contains(t.target) || (t.clientX>=box.left&&t.clientX<=box.right&&t.clientY>=box.top&&t.clientY<=box.bottom&&surface.contains(document.elementFromPoint(t.clientX,t.clientY))))ids.add(t.identifier);
         }
       }
-      if(grid.length<4)continue;
-      const ys=intersections(oriented(hole),at);if(ys.length<2)continue;
-      let marker=xy(at,(ys[0]+ys[1])/2),gap=ys[1]-ys[0];
-      for(let j=2;j+1<ys.length;j+=2)if(ys[j+1]-ys[j]>gap){gap=ys[j+1]-ys[j];marker=xy(at,(ys[j]+ys[j+1])/2)}
-      const finish={axis,at,min,max,direction};
-      const nodes=[xy(at,across),...r.slice(i+1).map(p=>p.slice(0,2)),...r.slice(0,i+1).map(p=>p.slice(0,2))].filter((v,k,arr)=>!k||dist(v,arr[k-1])>.02);
-      if(dist(nodes[0],nodes.at(-1))<.02)nodes.pop();
-      return {id:d.id,name:d.name.trim(),nodes,boundaries,grid,start:finish,finish,width:Math.ceil(Math.max(...outer.map(p=>p[0])))+2,height:Math.ceil(Math.max(...outer.map(p=>p[1])))+2,checkpoints:[],sectors:[[...nodes,nodes[0]]],kerbs:[[],[]],lapMarkers:[marker],winding:Math.sign(area(r))};
+      const points=Array.from(event.touches).filter(t=>ids.has(t.identifier)).sort((a,b)=>a.identifier-b.identifier);
+      const current=new Set(points.map(t=>t.identifier));
+      for(const id of ids)if(!current.has(id))ids.delete(id);
+      if(points.length<2 && !active)return;
+      if(event.cancelable)event.preventDefault();
+      if(points.length>=2 && enabled()){
+        const [a,b]=points;
+        const pair={x:(a.clientX+b.clientX)/2,y:(a.clientY+b.clientY)/2,
+          distance:Math.max(1,Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY))};
+        const next=a.identifier+'-'+b.identifier;
+        if(!active||signature!==next){active=true;signature=next;begin(pair)}
+        else if(event.type==='touchmove')move(pair);
+      }else if(!points.length || !enabled()){
+        active=false;signature='';finish();
+      }else signature='';
     }
-    if(preview)return {boundaries};
-    fail('Place la ligne sur un tronçon plus droit avec assez de place pour la grille.');
+    for(const type of ['touchstart','touchmove','touchend','touchcancel'])
+      document.addEventListener(type,handle,{capture:true,passive:false});
+    surface.addEventListener('gesturestart',e=>{if(enabled())e.preventDefault()},{passive:false});
+    surface.addEventListener('gesturechange',e=>{if(enabled())e.preventDefault()},{passive:false});
+    return ()=>active;
   }
+
   function list(){try{return JSON.parse(localStorage.getItem(key)||'[]')}catch{return []}}
   function save(d){const all=list().filter(x=>x.id!==d.id);localStorage.setItem(key,JSON.stringify([...all,d]))}
-  return {shape,build,list,save};
+  return {shape,build,list,save,gateView,crossGate,bindTouchPair};
 })();

@@ -114,7 +114,8 @@ select{font:inherit;min-height:42px;border:1px solid var(--edge);border-radius:1
 .confirmation-setting{display:flex;align-items:center;gap:9px;min-height:44px}
 .confirmation-setting input{width:20px;height:20px;min-height:0;accent-color:var(--mint)}
 .panel form p{font-size:.9rem}
-.shell .circuit svg[data-overview="true"]{height:auto;min-height:0;max-height:none;aspect-ratio:63.2/55.2}
+.shell.playing #board > *{pointer-events:none}.shell.playing #board > .choice{pointer-events:auto}.shell.playing #board{touch-action:none;user-select:none;-webkit-user-select:none}
+.shell:not(.playing) .circuit svg[data-overview="true"]{height:auto;min-height:0;max-height:none;aspect-ratio:63.2/55.2}
 .shell #replay-board{aspect-ratio:63.2/55.2}
 </style><style>.race-nav{display:flex;align-items:center;gap:14px;max-width:1100px;margin:auto;padding:6px 16px}.race-nav a{color:#bde4cc}.race-nav button{width:auto;min-height:36px;padding:5px 12px}</style><script src="/stats.js"></script></head>
 <body>
