@@ -39,28 +39,55 @@ globalThis.RaceAtelier=(()=>{
     const dx=c[0]-a[0],dy=c[1]-a[1],t=(dx*vy-dy*vx)/den,s=(dx*uy-dy*ux)/den;
     if(t>=0&&t<=1&&s>=0&&s<=1)return mix(a,b,t);
   }
-  function stripLoops(r,repair){
+  function stripLoops(r,bank){
     for(let attempt=0;attempt<180;attempt++){
       let changed=false;
       outer:for(let i=0;i<r.length-2;i++)for(let j=i+2;j<r.length;j++){
         if(i===0&&j===r.length-1)continue;
         const p=crossing(r[i],r[i+1],r[j],r[(j+1)%r.length]);if(!p)continue;
-        if(!repair)fail('Le trait se croise. Déplace un point du virage pour séparer les passages.');
+        if(!bank)fail('Le trait se croise. Déplace un point du virage pour séparer les passages.');
         const a=[p,...r.slice(i+1,j+1)],b=[p,...r.slice(j+1),...r.slice(0,i+1)];
-        if(Math.min(Math.abs(area(a)),Math.abs(area(b)))>4)fail('Deux portions de piste se recouvrent. Écarte-les ou réduis la largeur.');
-        r=Math.abs(area(a))>Math.abs(area(b))?a:b;changed=true;break outer;
+        const areaA=Math.abs(area(a)),areaB=Math.abs(area(b)),trimA=areaA<=areaB;
+        // Chaque bord conserve son segment d’origine, y compris à la fermeture de la boucle.
+        const first=bank.source.get(r[trimA?i:j]),last=bank.source.get(r[trimA?j:i]);
+        if(Math.min(areaA,areaB)>4 && !bank.localFold(first,last,p))
+          fail('Deux portions de piste se recouvrent. Écarte-les ou réduis la largeur.');
+        bank.source.set(p,last);
+        r=trimA?b:a;changed=true;break outer;
       }
       if(!changed)return r;
     }
     fail('Espace davantage les virages.');
   }
   function offset(r,w){
-    return stripLoops(r.map((p,i)=>{
+    const outline=r.map((p,i)=>{
       const a=r[(i+r.length-1)%r.length],b=r[(i+1)%r.length],u=dist(p,a),v=dist(b,p);
       const ux=(p[0]-a[0])/u,uy=(p[1]-a[1])/u,vx=(b[0]-p[0])/v,vy=(b[1]-p[1])/v;
       const factor=w*p[2]/2/Math.max(.18,1+ux*vx+uy*vy);
       return [p[0]-(uy+vy)*factor,p[1]+(ux+vx)*factor];
-    }),true);
+    });
+    const source=new Map(outline.map((p,i)=>[p,i]));
+    function fractionOnEdge(i,hit){
+      const a=outline[i],edge=sub(outline[(i+1)%r.length],a),length2=dot(edge,edge);
+      return length2?Math.max(0,Math.min(1,dot(sub(hit,a),edge)/length2)):0;
+    }
+    function localFold(first,last,hit){
+      // Quand le rayon du virage est inférieur à la demi-largeur, le bord intérieur
+      // repart en arrière. On raccorde ce pli sur une courte portion du tracé.
+      const from=fractionOnEdge(first,hit),to=fractionOnEdge(last,hit);
+      const limit=2.5*Math.min(r[first][2],r[last][2]);
+      let length=0,reversed=false;
+      for(let count=0;count<r.length;count++){
+        const i=(first+count)%r.length,next=(i+1)%r.length;
+        const portion=(i===last?to:1)-(i===first?from:0);
+        length+=portion*dist(r[i],r[next]);
+        if(length>limit)return false;
+        if(portion>0 && dot(sub(outline[next],outline[i]),sub(r[next],r[i]))<0)reversed=true;
+        if(i===last)return reversed;
+      }
+      return false;
+    }
+    return stripLoops(outline,{source,localFold});
   }
   const dot=(a,b)=>a[0]*b[0]+a[1]*b[1];
   const sub=(a,b)=>[a[0]-b[0],a[1]-b[1]];
