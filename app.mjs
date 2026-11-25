@@ -251,7 +251,7 @@ function drawSurface(course, target = board) {
 function draw(active, choices) {
   board.replaceChildren();
   const course=room?courseFor(room):seasonCourses[trackPicker.value];
-  byId('circuit-title').textContent=course.name??('Le Vallon des Aiguilles');
+  byId('circuit-title').textContent=course.name??('Spa');
   const {width,height,start,finish,grid:startingPositions} = course;
   if (zoom && active) {
     const [zoomWidth,zoomHeight] = zoomSizes[zoom];
@@ -272,11 +272,15 @@ function draw(active, choices) {
     if (start === finish) {
       svg('line',{...endpoints,stroke:'#121a1e','stroke-width':.54});
       for (const side of [-1,1]) {
-        const x = line.at+side*.13;
-        svg('line',{...endpoints,x1:x,x2:x,stroke:'#f2eee2','stroke-width':.26,
+        const offset = line.at+side*.13;
+        const stripe = line.axis === 'x' ? {x1:offset,x2:offset} : {y1:offset,y2:offset};
+        svg('line',{...endpoints,...stripe,stroke:'#f2eee2','stroke-width':.26,
           'stroke-dasharray':'.26 .26','stroke-dashoffset':side < 0 ? 0 : .26});
       }
-      svg('path',{d:`M ${line.at-1} ${line.min-.75} h -2 m 1 -.65 l -1 .65 1 .65`,
+      const middle=(line.min+line.max)/2;
+      const translate=line.axis==='x'?[line.at,middle]:[middle,line.at];
+      const angle=(line.axis==='x'?0:90)+(line.direction===1?0:180);
+      svg('path',{d:'M .7 0 H 2.7 m -.65 -.5 .65 .5 -.65 .5',transform:`translate(${translate.join(' ')}) rotate(${angle})`,
         fill:'none',stroke:color,'stroke-width':.24,'stroke-linecap':'round','stroke-linejoin':'round'});
     } else {
       svg('line',{...endpoints,stroke:color,'stroke-dasharray':'.54 .24','stroke-width':.25});
@@ -501,7 +505,8 @@ function startReplay() {
   const paths = players.map(player => makeReplayPath(player.trail));
   const moves = Math.max(...paths.map(path => path.moves));
   const duration = Math.max(1400,Math.min(16000,moves*235));
-  const headings = players.map(() => courseFor(room).start.axis === 'x' ? 180 : -90);
+  const start = courseFor(room).start;
+  const headings = players.map(() => (start.axis === 'x' ? 0 : 90) + (start.direction < 0 ? 180 : 0));
   const run = {frame:0,paused:false,last:null,elapsed:0,tick:null};
   replayRun = run;
 
