@@ -55,6 +55,7 @@ async function request(path,body,authorization = token) {
 
 function setRoom(next) {
   if (next.state==='closed') {
+    stopReplay(); announcedRace = null;
     room=null; token=null;
     localStorage.removeItem(identityKey('cq-last'));
     localStorage.removeItem(identityKey('cq-token-'+next.code));
@@ -63,7 +64,7 @@ function setRoom(next) {
   }
   if (room?.code === next.code && room.revision > next.revision) return;
   const justFinished = room?.state === 'racing' && next.state === 'finished';
-  if (next.state !== 'finished') stopReplay();
+  if (next.state !== 'finished') {stopReplay(); announcedRace = null;}
   if (room?.revision !== next.revision) selected = null;
   if (room?.state !== next.state || room?.turn !== next.turn || room?.round !== next.round) camera = null;
   if (room?.state !== 'racing' && next.state === 'racing') {pinchSize=null;zoom=matchMedia('(max-width: 680px)').matches ? 3 : 0;}
@@ -500,6 +501,7 @@ function replayAvailable() {
 
 function updateReplayControls() {
   const running = replayRun !== null;
+  document.querySelector('.shell').classList.toggle('replaying',running);
   board.toggleAttribute('hidden',running);
   byId('replay-board').toggleAttribute('hidden',!running);
   byId('replay-controls').hidden = !replayAvailable();
@@ -510,6 +512,7 @@ function updateReplayControls() {
 }
 
 function stopReplay() {
+  cancelFinishSequence();
   if (!replayRun) return;
   cancelAnimationFrame(replayRun.frame);
   replayRun = null;
@@ -517,8 +520,46 @@ function stopReplay() {
   if (room && room.state !== 'lobby') drawMinimap(courseFor(room));
 }
 
+let finishSequence = null;
+let announcedRace = null;
+function cancelFinishSequence() {
+  if (!finishSequence) return;
+  clearTimeout(finishSequence.timer);
+  finishSequence.overlay.remove();
+  finishSequence = null;
+}
 function playFinishedReplay() {
-  if (replayAvailable() && !matchMedia('(prefers-reduced-motion: reduce)').matches) startReplay();
+  if (!room || room.state !== 'finished' || announcedRace === (room.raceId ?? room.code)) return;
+  announcedRace = room.raceId ?? room.code;
+  const race = room;
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const overlay = document.createElement('div');
+  overlay.className = 'finish-overlay';
+  overlay.setAttribute('role','status');
+  const content = document.createElement('div');
+  content.className = 'finish-content';
+  overlay.append(content);
+  // A fixed pole and a waving cloth, animated by SVG paths rather than rotating the flag.
+  const flag = `<svg viewBox="0 0 160 110" aria-hidden="true"><defs><pattern id="finish-checks" width="24" height="24" patternUnits="userSpaceOnUse"><rect width="24" height="24" fill="white"/><path d="M0 0h12v12H0z M12 12h12v12H12z" fill="#171717"/></pattern></defs><path d="M19 8V103" stroke="#ddd" stroke-width="5" stroke-linecap="round"/><path fill="url(#finish-checks)" d="M22 12 Q52 0 82 12 T142 12 L142 68 Q112 80 82 68 T22 68Z">${reduced?'':`<animate attributeName="d" dur="0.85s" repeatCount="indefinite" values="M22 12 Q52 0 82 12 T142 12 L142 68 Q112 80 82 68 T22 68Z;M22 12 Q52 24 82 12 T142 12 L142 68 Q112 56 82 68 T22 68Z;M22 12 Q52 0 82 12 T142 12 L142 68 Q112 80 82 68 T22 68Z"/>`}</path></svg>`;
+  content.innerHTML = flag+'<h2>FIN DE COURSE</h2>';
+  document.body.append(overlay);
+  const seq = {overlay,timer:0};
+  finishSequence = seq;
+  const valid = () => finishSequence === seq && room?.state === 'finished' && (room.raceId ?? room.code) === (race.raceId ?? race.code);
+  seq.timer = setTimeout(() => {
+    if (!valid()) {if(finishSequence===seq)cancelFinishSequence();return;}
+    content.innerHTML = '<svg viewBox="0 0 160 110" aria-hidden="true"><path d="M45 12H115V40Q115 75 80 75Q45 75 45 40Z" fill="#f5bf63"/><path d="M45 22H25V35Q25 58 49 58M115 22H135V35Q135 58 111 58" fill="none" stroke="#f5bf63" stroke-width="7"/><path d="M80 73V96M57 99H103" stroke="#f5bf63" stroke-width="9" stroke-linecap="round"/></svg><h2></h2><p></p>';
+    const winners = race.winners ?? [];
+    content.querySelector('h2').textContent = winners.length > 1 ? 'ÉGALITÉ' : winners.length ? 'VICTOIRE !' : 'COURSE TERMINÉE';
+    const names = content.querySelector('p');
+    names.textContent = winners.map(i=>race.players[i]?.name).filter(Boolean).join(' et ');
+    if(winners.length===1) names.style.color = colors[winners[0]];
+    seq.timer = setTimeout(() => {
+      if (!valid()) {if(finishSequence===seq)cancelFinishSequence();return;}
+      cancelFinishSequence();
+      if (replayAvailable() && !reduced) startReplay();
+    }, 3000);
+  }, 1500);
 }
 
 function makeReplayPath(trail) {
@@ -581,6 +622,7 @@ function makeReplayPath(trail) {
 
 function startReplay() {
   if (!replayAvailable() || replayRun) return;
+  cancelFinishSequence();
   const scene = byId('replay-board');
   const {width,height,finish} = courseFor(room);
   scene.replaceChildren();
@@ -620,6 +662,7 @@ function startReplay() {
     }
   };
   updateReplayControls();
+  scene.scrollIntoView({block:'start',behavior:'instant'});
   run.frame = requestAnimationFrame(run.tick);
 }
 
