@@ -1,0 +1,22 @@
+.pad-settings { display:flex; flex-wrap:wrap; align-items:center; gap:6px 16px; color:#d4e3d6; font:14px/1.4 system-ui,sans-serif; }
+main > .pad-settings { margin-top:20px; border-top:1px solid #41534a; padding-top:8px; }
+.pad-settings label { display:inline-flex; align-items:center; gap:8px; min-height:44px; color:inherit; cursor:pointer; }
+.pad-settings input[type=checkbox] { width:19px; height:19px; min-height:0; margin:0; accent-color:#c9f496; }
+[data-pad-status] { color:#b5c7bb; }
+.pad-help,.pad-tools-help { display:none; }
+.pad-connected .playing .pad-help,.pad-active.pad-tools .playing .pad-tools-help { display:block; margin:0; padding:3px 8px; color:#deeddc; font:600 14px/1.4 system-ui,sans-serif; }
+.pad-active.pad-tools .playing .pad-help { display:none; }
+.pad-line { display:none; }
+.pad-active .pad-line { display:inline; pointer-events:none; }
+.pad-active #board .choice[aria-pressed="true"] .choice-ring { fill:#e0ff99; fill-opacity:1; stroke:#152318; stroke-width:.14; }
+.pad-active #board .choice[aria-pressed="true"] text { fill:#142116; fill-opacity:1; }
+.pad-active #board .choice[aria-pressed="true"] { filter:drop-shadow(0 0 .09px white); }
+.pad-active .pad-focus { outline:3px solid #e1ff9f !important; outline-offset:3px; box-shadow:0 0 0 5px #172820; }
+.pad-keyboard { box-sizing:border-box; width:min(580px,95vw); max-height:92vh; overflow:auto; padding:18px; background:#1a2b23; border:1px solid #74957e; border-radius:14px; color:#f4f6ea; font:16px/1.4 system-ui,sans-serif; }
+.pad-keyboard::backdrop { background:rgb(5 12 8 / .75); }
+.pad-keyboard h2 { margin:0 0 8px; font-size:21px; }
+.pad-keyboard output { display:block; float:none; box-sizing:border-box; min-height:42px; max-height:4em; overflow:auto; overflow-wrap:anywhere; margin-bottom:12px; padding:8px; border:1px solid #62766b; border-radius:5px; background:#0f1b15; }
+.pad-keys { display:grid; grid-template-columns:repeat(10,minmax(0,1fr)); gap:5px; }
+.pad-key-actions { display:flex; flex-wrap:wrap; gap:7px; margin-top:12px; }
+.pad-keyboard button { min-width:0; min-height:40px; border:1px solid #62766b; border-radius:6px; color:#f0f3e9; background:#2c4235; padding:5px; font:600 16px/1.2 system-ui,sans-serif; cursor:pointer; }
+@media (max-width:500px){ .pad-keys { grid-template-columns:repeat(8,minmax(0,1fr)); } }

@@ -11,5 +11,5 @@
     "archive": "node scripts/archive.mjs",
     "circuit:import": "node scripts/import-circuit.mjs"
   },
-  "version": "0.2.0"
+  "version": "0.3.0"
 }

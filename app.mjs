@@ -395,6 +395,10 @@ function draw(active, choices) {
     svg('circle',{cx:driver.x,cy:driver.y,r:driver===active ? .37 : .29,
       fill:colors[index],stroke:'#102029','stroke-width':.09});
   });
+  if (active && selected && choices.some(m=>!m.blocked && m.x===selected.x && m.y===selected.y)) {
+    svg('line',{class:'pad-line',x1:active.x,y1:active.y,x2:selected.x,y2:selected.y,
+      stroke:'#e0ff99','stroke-width':.13,'stroke-dasharray':'.25 .16'});
+  }
   for (const choice of choices) {
     const attributes = { transform:`translate(${choice.x} ${choice.y})` };
     const color = choice.blocked ? '#a6b2b7' : colors[room.turn];
@@ -748,7 +752,7 @@ function render() {
       if (room.players.some(player => player.finish !== null)) {
         hint.textContent = 'Arrivée franchie. Finissez la manche. '+hint.textContent;
       }
-      if (selected && room.doubleConfirm) hint.textContent += ' Deux pressions rapides sur la même case valident le coup.';
+      if (selected && room.doubleConfirm && !document.documentElement.classList.contains('pad-active')) hint.textContent += ' Deux pressions rapides sur la même case valident le coup.';
       showButton(canMove ? 'Valider le déplacement' : 'Passer le tour','move',canMove&&!selected);
     }
   }
@@ -783,6 +787,25 @@ function submitAction() {
 }
 primary.addEventListener('click',submitAction);
 function confirmMove() { if(primaryAction === 'move') submitAction(); }
+RacePad.bindRace({
+  room:()=>room, selected:()=>selected, busy:()=>pending, options,
+  origin(current){
+    const p=current.players[current.turn];
+    const recovering=p.recovery>0 || !inside(p.x,p.y,courseFor(current));
+    return {x:p.x+(recovering?0:p.vx),y:p.y+(recovering?0:p.vy)};
+  },
+  select(next){
+    lastChoicePress=null;selected=next;
+    if(next && zoom){
+      const view=board.viewBox.baseVal;
+      if(next.x-.5<view.x || next.y-.5<view.y || next.x+.5>view.x+view.width || next.y+.5>view.y+view.height)
+        camera={x:next.x,y:next.y};
+    }
+    render();
+  },
+  canConfirm:()=>primaryAction==='move' && !primary.hidden && !primary.disabled,
+  confirm:confirmMove
+});
 bindZoom();
 bindPan();
 bindMinimap();

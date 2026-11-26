@@ -66,3 +66,18 @@ Les circuits personnels expirent sept jours après leur dernière sauvegarde sur
 4. Rouvrir le choix du circuit en solo, contre l’IA, sur le même écran ou dans un nouveau salon. Le tracé figure sous **Circuits officiels** et reste disponible sans expiration. Une course déjà lancée garde sa version du tracé.
 
 Pour ajouter un tracé immédiatement sur le serveur en fonctionnement, exécuter `npm run circuit:import -- "Mon circuit.json"` sur la machine qui héberge le jeu. La commande doit utiliser le même chemin `RACE_DATABASE` que le serveur.
+
+
+## Commandes à la manette en 0.3
+
+Ouvrir l’adresse HTTPS habituelle du jeu. L’option **Commandes à la manette** est activée par défaut dans le menu et le formulaire de préparation. Le choix est mémorisé sur l’appareil. Appuyer sur un bouton et le relâcher pour que le navigateur détecte la manette. Sur Xbox dans Microsoft Edge, sélectionner **Utiliser les commandes de jeu** si le stick déplace encore le curseur du navigateur.
+
+| Situation | Commandes Xbox |
+| --- | --- |
+| Menus | Croix ou stick gauche pour déplacer la surbrillance, A pour activer, B pour revenir. LB/RB parcourent aussi les boutons dans l’ordre. |
+| Réglages de course | Gauche/droite sur une liste pour changer la valeur. A sur un champ de texte ouvre le clavier de Raceapp. |
+| À ton tour | Croix ou stick gauche pour choisir une case autorisée. Le premier appui part de la position prévue par l’élan. LB/RB permettent de parcourir toutes les possibilités, diagonales comprises. |
+| Validation | Appuyer sur **A** pour jouer la case en surbrillance. Relâcher avant la validation suivante. **B** efface le choix. Si toutes les destinations sont bloquées, **A** passe le tour. |
+| Boutons pendant la course | **X** permet de rejoindre les boutons de zoom, de retour ou de forfait. B ou X ramène à la grille. |
+
+En local à plusieurs, passer la manette au pilote suivant après chaque coup. Les règles, le délai du jeu en direct et les données de la version 0.2 sont conservés. Le dessin libre dans l’atelier se fait au tactile, à la souris ou au stylet.

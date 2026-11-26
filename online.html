@@ -117,7 +117,7 @@ select{font:inherit;min-height:42px;border:1px solid var(--edge);border-radius:1
 .shell.playing #board > *{pointer-events:none}.shell.playing #board > .choice{pointer-events:auto}.shell.playing #board{touch-action:none;user-select:none;-webkit-user-select:none}
 .shell:not(.playing) .circuit svg[data-overview="true"]{height:auto;min-height:0;max-height:none;aspect-ratio:63.2/55.2}
 .shell #replay-board{aspect-ratio:63.2/55.2}
-</style><style>.race-nav{display:flex;align-items:center;gap:14px;max-width:1100px;margin:auto;padding:6px 16px}.race-nav #forfeit{width:auto;min-height:36px;padding:5px 12px}</style><script src="profile.js"></script><script src="/stats.js"></script><link rel="stylesheet" href="ui.css"><style>
+</style><style>.race-nav{display:flex;align-items:center;gap:14px;max-width:1100px;margin:auto;padding:6px 16px}.race-nav #forfeit{width:auto;min-height:36px;padding:5px 12px}</style><script src="profile.js"></script><script src="/stats.js"></script><link rel="stylesheet" href="ui.css"><link rel="stylesheet" href="manette.css"><script src="manette.js"></script><style>
 .local-choice{display:flex;align-items:center;justify-content:center;min-height:44px;padding:7px 13px;border:1px solid #678075;border-radius:10px;background:#203029;color:var(--paper);font-weight:650;text-decoration:none}
 .local-choice:focus-visible{outline:2px solid var(--yellow);outline-offset:3px}
 </style></head>
@@ -148,7 +148,7 @@ select{font:inherit;min-height:42px;border:1px solid var(--edge);border-radius:1
         </header>
         <svg id="board" role="group" aria-label="Circuit quadrillé" tabindex="0"></svg>
         <svg id="replay-board" role="img" aria-label="Replay des monoplaces" hidden></svg>
-        <div id="race-dock" class="race-dock" hidden></div>
+        <div id="race-dock" class="race-dock" hidden><p class="pad-help">Croix ou stick · Choisir　 A · Valider　 B · Annuler　 X · Boutons</p><p class="pad-tools-help">Boutons de course · A pour activer, B pour revenir à la grille.</p></div>
         <div class="legend"><span><i class="finish-key"></i>Départ et arrivée</span><span><i></i>Prochain repère</span></div>
       </section>
       <section id="control-panel" class="panel" aria-label="Contrôles de la partie">
@@ -157,8 +157,9 @@ select{font:inherit;min-height:42px;border:1px solid var(--edge);border-radius:1
           <select id="lap-goal">
             <option>1</option><option>2</option>
           </select>
+          <div class="pad-settings"><label><input type="checkbox" data-pad-toggle checked> Commandes à la manette</label><span data-pad-status role="status">Détection de la manette…</span></div>
           <label class="confirmation-setting"><input id="double-confirm" type="checkbox" checked> Valider par double pression</label>
-          <button type="submit" value="create" hidden>Créer une salle</button><button type="submit" value="join" class="secondary">Rejoindre la salle</button><p>2 à 4 joueurs · 15 secondes par déplacement</p><a class="local-choice" href="local.html?from=online">Jouer sur le même écran</a>
+          <button type="submit" data-pad-first value="create" hidden>Créer une salle</button><button type="submit" data-pad-first value="join" class="secondary">Rejoindre la salle</button><p>2 à 4 joueurs · 15 secondes par déplacement</p><a class="local-choice" href="local.html?from=online">Jouer sur le même écran</a>
         </form>
         <div id="game" hidden>
           <section id="lobby-heading"><h2>Salle <span id="display-code"></span></h2><button id="invite">Copier le lien d’invitation</button></section><h2>Positions et vitesses</h2>
@@ -168,7 +169,7 @@ select{font:inherit;min-height:42px;border:1px solid var(--edge);border-radius:1
             <p id="round-count" hidden></p>
             <p id="lap-notice" class="lap-notice" aria-live="polite" hidden></p>
             <p id="hint"></p>
-            <button type="button" id="primary" hidden></button>
+            <button type="button" data-pad-first id="primary" hidden></button>
           </div></div>
           <div id="result-map"><section id="minimap-panel" class="minimap-panel" aria-labelledby="minimap-title" hidden>
             <h3 id="minimap-title">Mini-carte</h3>

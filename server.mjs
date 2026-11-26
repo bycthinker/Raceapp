@@ -42,6 +42,8 @@ const files = new Map([
   ['/',['index.html','text/html; charset=utf-8']],
   ['/tutorial',['tutorial.html','text/html; charset=utf-8']],
   ['/stats',['stats.html','text/html; charset=utf-8']],
+  ['/manette.js',['manette.js','text/javascript']],
+  ['/manette.css',['manette.css','text/css']],
   ['/profile.js',['profile.js','text/javascript']],
   ['/Raceapp-Createur-de-circuits.html',['Raceapp-Createur-de-circuits.html','text/html; charset=utf-8']],
   ['/compte',['compte.html','text/html; charset=utf-8']],

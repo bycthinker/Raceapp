@@ -117,7 +117,7 @@ select{font:inherit;min-height:42px;border:1px solid var(--edge);border-radius:1
 .shell.playing #board > *{pointer-events:none}.shell.playing #board > .choice{pointer-events:auto}.shell.playing #board{touch-action:none;user-select:none;-webkit-user-select:none}
 .shell:not(.playing) .circuit svg[data-overview="true"]{height:auto;min-height:0;max-height:none;aspect-ratio:63.2/55.2}
 .shell #replay-board{aspect-ratio:63.2/55.2}
-</style><style>.race-nav{display:flex;align-items:center;gap:14px;max-width:1100px;margin:auto;padding:6px 16px}.race-nav #forfeit{width:auto;min-height:36px;padding:5px 12px}</style><script src="atelier-core.js"></script><script src="profile.js"></script><script src="stats.js"></script><link rel="stylesheet" href="ui.css"></head>
+</style><style>.race-nav{display:flex;align-items:center;gap:14px;max-width:1100px;margin:auto;padding:6px 16px}.race-nav #forfeit{width:auto;min-height:36px;padding:5px 12px}</style><script src="atelier-core.js"></script><script src="profile.js"></script><script src="stats.js"></script><link rel="stylesheet" href="ui.css"><link rel="stylesheet" href="manette.css"><script src="manette.js"></script></head>
 <body class="grid-scene">
   <nav class="race-nav" aria-label="Navigation"><button type="button" class="back-button" id="home">Retour</button><button id="forfeit" type="button" hidden>Déclarer forfait</button></nav><main class="shell">
     <header class="mast">
@@ -145,7 +145,7 @@ select{font:inherit;min-height:42px;border:1px solid var(--edge);border-radius:1
         </header>
         <svg id="board" role="group" aria-label="Circuit quadrillé" tabindex="0"></svg>
         <svg id="replay-board" role="img" aria-label="Replay des monoplaces" hidden></svg>
-        <div id="race-dock" class="race-dock" hidden></div>
+        <div id="race-dock" class="race-dock" hidden><p class="pad-help">Croix ou stick · Choisir　 A · Valider　 B · Annuler　 X · Boutons</p><p class="pad-tools-help">Boutons de course · A pour activer, B pour revenir à la grille.</p></div>
         <div class="legend"><span><i class="finish-key"></i>Départ et arrivée</span><span><i></i>Prochain repère</span></div>
       </section>
       <section id="control-panel" class="panel" aria-label="Contrôles de la partie">
@@ -160,8 +160,9 @@ select{font:inherit;min-height:42px;border:1px solid var(--edge);border-radius:1
           <select id="lap-goal">
             <option>1</option><option>2</option>
           </select>
+          <div class="pad-settings"><label><input type="checkbox" data-pad-toggle checked> Commandes à la manette</label><span data-pad-status role="status">Détection de la manette…</span></div>
           <label class="confirmation-setting"><input id="double-confirm" type="checkbox" checked> Valider par double pression</label>
-          <button type="submit">Lancer la course</button>
+          <button type="submit" data-pad-first>Lancer la course</button>
           <p>À chaque tour, choisis une intersection puis valide le déplacement. Passe ensuite l’écran au joueur suivant.</p>
         </form>
         <div id="game" hidden>
@@ -172,7 +173,7 @@ select{font:inherit;min-height:42px;border:1px solid var(--edge);border-radius:1
             <p id="round-count" hidden></p>
             <p id="lap-notice" class="lap-notice" aria-live="polite" hidden></p>
             <p id="hint"></p>
-            <button type="button" id="primary" hidden></button>
+            <button type="button" data-pad-first id="primary" hidden></button>
           </div></div>
           <div id="result-map"><section id="minimap-panel" class="minimap-panel" aria-labelledby="minimap-title" hidden>
             <h3 id="minimap-title">Mini-carte</h3>
@@ -989,6 +990,10 @@ function draw(active, choices) {
     svg('circle',{cx:driver.x,cy:driver.y,r:driver===active ? .37 : .29,
       fill:colors[index],stroke:'#102029','stroke-width':.09});
   });
+  if (active && selected && choices.some(m=>!m.blocked && m.x===selected.x && m.y===selected.y)) {
+    svg('line',{class:'pad-line',x1:active.x,y1:active.y,x2:selected.x,y2:selected.y,
+      stroke:'#e0ff99','stroke-width':.13,'stroke-dasharray':'.25 .16'});
+  }
   for (const choice of choices) {
     const attributes = { transform:`translate(${choice.x} ${choice.y})` };
     const color = choice.blocked ? '#a6b2b7' : colors[room.turn];
@@ -1340,7 +1345,7 @@ function render(){
       if (room.players.some(player => player.finish !== null)) {
         hint.textContent = 'Arrivée franchie. Finissez la manche. '+hint.textContent;
       }
-      if (selected && room.doubleConfirm) hint.textContent += ' Deux pressions rapides sur la même case valident le coup.';
+      if (selected && room.doubleConfirm && !document.documentElement.classList.contains('pad-active')) hint.textContent += ' Deux pressions rapides sur la même case valident le coup.';
       showButton(canMove ? 'Valider le déplacement' : 'Passer le tour','move',canMove&&!selected);
     }
   }
@@ -1383,6 +1388,25 @@ primary.addEventListener('click',() => {
   } else {
     confirmMove();
   }
+});
+RacePad.bindRace({
+  room:()=>room, selected:()=>selected, busy:()=>pending, options,
+  origin(current){
+    const p=current.players[current.turn];
+    const recovering=p.recovery>0 || !inside(p.x,p.y,courseFor(current));
+    return {x:p.x+(recovering?0:p.vx),y:p.y+(recovering?0:p.vy)};
+  },
+  select(next){
+    lastChoicePress=null;selected=next;
+    if(next && zoom){
+      const view=board.viewBox.baseVal;
+      if(next.x-.5<view.x || next.y-.5<view.y || next.x+.5>view.x+view.width || next.y+.5>view.y+view.height)
+        camera={x:next.x,y:next.y};
+    }
+    render();
+  },
+  canConfirm:()=>primaryAction==='move' && !primary.hidden && !primary.disabled,
+  confirm:confirmMove
 });
 bindZoom();
 bindPan();
